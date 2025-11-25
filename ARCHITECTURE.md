@@ -213,7 +213,7 @@ you should be aware of:
 - ISO error term infrastructure (`error(ErrorType, Context)` along with
   `instantiation_error`, `type_error`, etc.) still needs work; most built-ins
   fail silently instead of raising structured errors.
-- A handful of parser edge cases remain unimplemented (`0'\\xHH\\` hex escapes).
+- A handful of parser edge cases remain unimplemented.
 - No DCG, module system, CLP libraries, or tail-call optimization. Very deep
   recursion can still overflow Python's stack in pathological cases.
 

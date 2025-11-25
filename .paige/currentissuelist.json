@@ -15,19 +15,6 @@
       "linked_branches": []
     },
     {
-      "number": 87,
-      "title": "Parser: support Base'atom'digit syntax",
-      "url": "https://github.com/nlothian/Vibe-Prolog/issues/87",
-      "parent": null,
-      "blocked_by": [],
-      "blocking": [],
-      "description": "ARCHITECTURE.md also calls out the missing `Base'atom'digit` syntax for numeric literals.\n\nPlease implement parsing for ISO-style base-qualified numbers such as `16'ff` or `2'abcd`, ensuring both atom and digit parts obey the spec (case-insensitive digits, base bounds, sign handling, etc.).\n\nAcceptance criteria:\n- Parser accepts valid `Base'atom'digit` literals and emits the correct integer value.\n- Invalid bases, digits outside the base, and malformed atoms raise ISO-compliant syntax errors.\n- Add comprehensive test cases covering minimum/maximum bases, uppercase/lowercase digits, underscores/spacing edge cases, and failure scenarios.\n- Update FEATURES.md and ARCHITECTURE.md to say this syntax is implemented.",
-      "comments": [],
-      "labels": [],
-      "milestones": [],
-      "linked_branches": []
-    },
-    {
       "number": 86,
       "title": "Parser: support 0'\\xHH hex escapes",
       "url": "https://github.com/nlothian/Vibe-Prolog/issues/86",

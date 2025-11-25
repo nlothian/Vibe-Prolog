@@ -853,11 +853,6 @@ class TestISOParserEdgeCases:
         # Should be equal (test_116): both ways of escaping quote
         assert prolog.has_solution("0''' = 0'\\'")
 
-    @pytest.mark.skip(reason="Hex character code syntax 0'\\xHH\\ requires the parser to handle "
-                      "a trailing backslash after the hex digits. The current CHAR_CODE regex "
-                      "matches this but the lexer fails to tokenize it correctly because the "
-                      "trailing backslash conflicts with string literal tokenization. This is "
-                      "an extremely obscure ISO Prolog syntax rarely used in practice.")
     def test_character_codes_hex(self):
         # Conformity: test_123, test_124, test_125
         prolog = PrologInterpreter()

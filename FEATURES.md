@@ -123,7 +123,7 @@
 - ❌ `:- dynamic/1` – Declare dynamic predicate
 - ❌ `:- multifile/1` – Declare multifile predicate
 - ❌ `:- discontiguous/1` – Declare discontiguous predicate
-- ❌ `:- initialization/1` – Specify initialization goal
+- ✅ `:- initialization/1` – Specify initialization goal
 
 ### Operator Directives
 - ❌ `:- op/3` – Define operator
@@ -138,7 +138,7 @@
 - ✅ Compound terms
 - ✅ Lists (proper and improper)
 - ✅ Character codes (`0'X`, `0'\n`, etc.)
-- ⚠️ Character codes (`0'\\xHH\\` - hex escape syntax missing)
+- ✅ Character codes (`0'\\xHH\\` - hex escape syntax)
 
 ### Operators
 - ✅ Arithmetic operators (`+`, `-`, `*`, `/`, `//`, `mod`, `**`)
@@ -207,7 +207,7 @@
 2. **Character Code Syntax**: Some advanced character code forms not supported
 
 ### Parser Limitations
-1. **Hex Character Codes**: `0'\xHH\` syntax not fully supported
+1. **Hex Character Codes**: `0'\xHH\` syntax now supported
 2. **SWI-Style Dict Syntax**: `tag{a:1}` syntax not supported
 3. **Operator Definition**: `:- op/3` directive rejected (not implemented)
 4. **Unary Minus Precedence**: In some cases, unary minus may bind differently than expected (e.g., `-X + Y` parses as `-(X + Y)`)

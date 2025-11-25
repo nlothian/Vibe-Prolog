@@ -559,6 +559,192 @@ class TestBaseDigits:
             parser.parse("num(16'@).")
 
 
+class TestCharacterCodes:
+    r"""Tests for parsing character code literals like 0'X and 0'\xHH."""
+
+    def test_parse_simple_char_code(self):
+        """Test parsing simple character codes like 0'a."""
+        parser = PrologParser()
+        clauses = parser.parse("test(0'a).")
+        clause = clauses[0]
+        assert isinstance(clause.head.args[0], Number)
+        assert clause.head.args[0].value == ord('a')
+
+    def test_parse_backslash_escape(self):
+        """Test parsing backslash escape 0'\\."""
+        parser = PrologParser()
+        clauses = parser.parse("test(0'\\\\).")
+        clause = clauses[0]
+        assert isinstance(clause.head.args[0], Number)
+        assert clause.head.args[0].value == ord('\\')
+
+    def test_parse_quote_escape_doubled(self):
+        """Test parsing doubled quote escape 0'''."""
+        parser = PrologParser()
+        clauses = parser.parse("test(0''').")
+        clause = clauses[0]
+        assert isinstance(clause.head.args[0], Number)
+        assert clause.head.args[0].value == ord("'")
+
+    def test_parse_quote_escape_backslash(self):
+        """Test parsing backslash quote escape 0'\\'."""
+        parser = PrologParser()
+        clauses = parser.parse("test(0'\\').")
+        clause = clauses[0]
+        assert isinstance(clause.head.args[0], Number)
+        assert clause.head.args[0].value == ord("'")
+
+    def test_parse_hex_escape_two_digits(self):
+        r"""Test parsing hex escape 0'\x41 (two digits)."""
+        parser = PrologParser()
+        clauses = parser.parse("test(0'\\x41).")
+        clause = clauses[0]
+        assert isinstance(clause.head.args[0], Number)
+        assert clause.head.args[0].value == 65  # 'A'
+
+    def test_parse_hex_escape_four_digits(self):
+        r"""Test parsing hex escape 0'\x0041 (four digits)."""
+        parser = PrologParser()
+        clauses = parser.parse("test(0'\\x0041).")
+        clause = clauses[0]
+        assert isinstance(clause.head.args[0], Number)
+        assert clause.head.args[0].value == 65  # 'A'
+
+    def test_parse_hex_escape_uppercase(self):
+        r"""Test parsing hex escape with uppercase digits 0'\xFF."""
+        parser = PrologParser()
+        clauses = parser.parse("test(0'\\xFF).")
+        clause = clauses[0]
+        assert isinstance(clause.head.args[0], Number)
+        assert clause.head.args[0].value == 255
+
+    def test_parse_hex_escape_mixed_case(self):
+        r"""Test parsing hex escape with mixed case digits 0'\xAbCd."""
+        parser = PrologParser()
+        clauses = parser.parse("test(0'\\xAbCd).")
+        clause = clauses[0]
+        assert isinstance(clause.head.args[0], Number)
+        # A=10, b=11, C=12, d=13: 10*4096 + 11*256 + 12*16 + 13 = 43981
+        assert clause.head.args[0].value == 10*4096 + 11*256 + 12*16 + 13
+
+    def test_parse_hex_escape_single_digit(self):
+        r"""Test parsing hex escape with single digit 0'\x1."""
+        parser = PrologParser()
+        clauses = parser.parse("test(0'\\x1).")
+        clause = clauses[0]
+        assert isinstance(clause.head.args[0], Number)
+        assert clause.head.args[0].value == 1
+
+    def test_parse_hex_escape_zero(self):
+        r"""Test parsing hex escape 0'\x00."""
+        parser = PrologParser()
+        clauses = parser.parse("test(0'\\x00).")
+        clause = clauses[0]
+        assert isinstance(clause.head.args[0], Number)
+        assert clause.head.args[0].value == 0
+
+    def test_parse_hex_escape_max_unicode(self):
+        r"""Test parsing hex escape for a high Unicode code point."""
+        parser = PrologParser()
+        clauses = parser.parse("test(0'\\x10FFFF).")
+        clause = clauses[0]
+        assert isinstance(clause.head.args[0], Number)
+        assert clause.head.args[0].value == 0x10FFFF
+
+    def test_invalid_hex_escape_empty(self):
+        r"""Test invalid empty hex escape 0'\x."""
+        parser = PrologParser()
+        with pytest.raises(PrologThrow, match="empty hex sequence"):
+            parser.parse("test(0'\\x).")
+
+    def test_invalid_hex_escape_non_hex_digit(self):
+        r"""Test invalid hex escape with non-hex digit 0'\xGG."""
+        parser = PrologParser()
+        with pytest.raises(PrologThrow, match="invalid literal for int"):
+            parser.parse("test(0'\\xGG).")
+
+    def test_invalid_hex_escape_mixed_invalid(self):
+        r"""Test invalid hex escape with mixed valid/invalid digits 0'\xAG."""
+        parser = PrologParser()
+        with pytest.raises(PrologThrow, match="invalid literal for int"):
+            parser.parse("test(0'\\xAG).")
+
+    def test_parse_hex_escape_with_trailing_backslash(self):
+        r"""Test parsing hex escape with trailing backslash 0'\x41\."""
+        parser = PrologParser()
+        clauses = parser.parse("test(0'\\x41\\\\).")
+        clause = clauses[0]
+        assert isinstance(clause.head.args[0], Number)
+        assert clause.head.args[0].value == 65  # 'A'
+
+    def test_parse_hex_escape_four_digits_with_backslash(self):
+        r"""Test parsing hex escape 0'\x0041\ with trailing backslash."""
+        parser = PrologParser()
+        clauses = parser.parse("test(0'\\x0041\\\\).")
+        clause = clauses[0]
+        assert isinstance(clause.head.args[0], Number)
+        assert clause.head.args[0].value == 65  # 'A'
+
+    def test_parse_hex_escape_uppercase_with_backslash(self):
+        r"""Test parsing hex escape with uppercase digits and trailing backslash 0'\xFF\."""
+        parser = PrologParser()
+        clauses = parser.parse("test(0'\\xFF\\\\).")
+        clause = clauses[0]
+        assert isinstance(clause.head.args[0], Number)
+        assert clause.head.args[0].value == 255
+
+    def test_parse_hex_escape_mixed_case_with_backslash(self):
+        r"""Test parsing hex escape with mixed case digits and trailing backslash 0'\xAbCd\."""
+        parser = PrologParser()
+        clauses = parser.parse("test(0'\\xAbCd\\\\).")
+        clause = clauses[0]
+        assert isinstance(clause.head.args[0], Number)
+        # A=10, b=11, C=12, d=13: 10*4096 + 11*256 + 12*16 + 13 = 43981
+        assert clause.head.args[0].value == 10*4096 + 11*256 + 12*16 + 13
+
+    def test_parse_hex_escape_single_digit_with_backslash(self):
+        r"""Test parsing hex escape with single digit and trailing backslash 0'\x1\."""
+        parser = PrologParser()
+        clauses = parser.parse("test(0'\\x1\\\\).")
+        clause = clauses[0]
+        assert isinstance(clause.head.args[0], Number)
+        assert clause.head.args[0].value == 1
+
+    def test_parse_hex_escape_zero_with_backslash(self):
+        r"""Test parsing hex escape 0'\x00\ with trailing backslash."""
+        parser = PrologParser()
+        clauses = parser.parse("test(0'\\x00\\\\).")
+        clause = clauses[0]
+        assert isinstance(clause.head.args[0], Number)
+        assert clause.head.args[0].value == 0
+
+    def test_parse_hex_escape_max_unicode_with_backslash(self):
+        r"""Test parsing hex escape for a high Unicode code point with trailing backslash."""
+        parser = PrologParser()
+        clauses = parser.parse("test(0'\\x10FFFF\\\\).")
+        clause = clauses[0]
+        assert isinstance(clause.head.args[0], Number)
+        assert clause.head.args[0].value == 0x10FFFF
+
+    def test_invalid_hex_escape_empty_with_backslash(self):
+        r"""Test invalid empty hex escape 0'\x\."""
+        parser = PrologParser()
+        with pytest.raises(PrologThrow, match="empty hex sequence"):
+            parser.parse("test(0'\\x\\\\).")
+
+    def test_invalid_hex_escape_non_hex_digit_with_backslash(self):
+        r"""Test invalid hex escape with non-hex digit and trailing backslash 0'\xGG\."""
+        parser = PrologParser()
+        with pytest.raises(PrologThrow, match="invalid literal for int"):
+            parser.parse("test(0'\\xGG\\\\).")
+
+    def test_invalid_hex_escape_mixed_invalid_with_backslash(self):
+        r"""Test invalid hex escape with mixed valid/invalid digits and trailing backslash 0'\xAG\."""
+        parser = PrologParser()
+        with pytest.raises(PrologThrow, match="invalid literal for int"):
+            parser.parse("test(0'\\xAG\\\\).")
+
+
 class TestComplexExamples:
     """Tests for parsing complex real-world examples."""
 

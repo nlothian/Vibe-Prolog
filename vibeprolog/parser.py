@@ -48,13 +48,21 @@ class Clause:
         return self.body is not None
 
 
+@dataclass
+class Directive:
+    """A Prolog directive (e.g., :- initialization(goal).)."""
+
+    goal: Any  # The goal term of the directive
+
+
 # Lark grammar for Prolog
 PROLOG_GRAMMAR = r"""
-    start: clause+
+    start: (directive | clause)+
 
     clause: fact | rule
     fact: term "."
-    rule: term ":-" goals "."
+    rule: term RULE_OP goals "."
+    directive: DIRECTIVE_OP term "."
 
     goals: term ("," term)*
 
@@ -86,8 +94,8 @@ PROLOG_GRAMMAR = r"""
         | curly_braces
         | string
         | cut
-        | char_code
         | number
+        | char_code
         | atom
         | variable
         | list
@@ -118,22 +126,24 @@ PROLOG_GRAMMAR = r"""
     cut: "!"
 
     // Character codes: 0'X where X is any character (must come before NUMBER)
-    // Patterns: 0'a (simple char), 0'\\ (backslash), 0'\' (quote), 0''' (doubled quote), 0'\xHH\ (hex)
-    CHAR_CODE.1: /0'(\\x[0-9a-fA-F]+\\\\|\\\\\\\\|\\\\['tnr]|''|[^'])/ | /\d+'.'/
+    // Patterns: 0'a (simple char), 0'\\ (backslash), 0'\' (quote), 0''' (doubled quote), 0'\xHH (hex)
+    CHAR_CODE.0: /0'\\x[0-9a-fA-F]+\\?/ | /0'./
 
     // Scientific notation, hex, octal, binary, base'digits
     NUMBER.4: /-?0x[0-9a-fA-F]+/i
-            | /-?0o[0-7]+/i
-            | /-?0b[01]+/i
-            | /-?\d+\.?\d*[eE][+-]?\d+/
-            | /-?\d+\.\d+/
-            | /-?\.\d+/
-            | /-?\d+'[a-zA-Z0-9_]+/
-            | /-?\d+/
+             | /-?0o[0-7]+/i
+             | /-?0b[01]+/i
+             | /-?\d+\.?\d*[eE][+-]?\d+/
+             | /-?\d+\.\d+/
+             | /-?\.\d+/
+             | /-?\d+'[a-zA-Z0-9_]+/
+             | /-?\d+/
 
     STRING: /"([^"\\]|\\.)*"/ | /'(\\.|''|[^'\\])*'/
     SPECIAL_ATOM: /'([^'\\]|\\.)+'/
-    SPECIAL_ATOM_OPS.5: /-\$/ | /:-/
+    SPECIAL_ATOM_OPS.5: /-\$/
+    DIRECTIVE_OP: /:-/
+    RULE_OP: /:-/
     ATOM: /[a-z][a-zA-Z0-9_]*/ | /\{\}/ | /\$[a-zA-Z0-9_-]*/ | /[+\-*\/]/
 
     VARIABLE: /[A-Z_][a-zA-Z0-9_]*/
@@ -157,11 +167,14 @@ class PrologTransformer(Transformer):
     def clause(self, items):
         return items[0]
 
+    def directive(self, items):
+        return Directive(goal=items[1])
+
     def fact(self, items):
         return Clause(head=items[0], body=None)
 
     def rule(self, items):
-        head, body = items
+        head, _, body = items
         return Clause(head=head, body=body)
 
     def goals(self, items):
@@ -358,6 +371,11 @@ class PrologTransformer(Transformer):
         base_str, digits_str = parts
         # Base must be a valid integer; token regex guarantees digits for base
         base = int(base_str)
+        if base == 0:
+            # This is 0'char syntax, treat as character code
+            # Reconstruct the full string and call char_code
+            full_value = ('-' if negative else '') + value
+            return self.char_code([full_value])
         if not (2 <= base <= 36):
             raise ValueError(f"Base must be between 2 and 36, got {base}")
 
@@ -408,11 +426,25 @@ class PrologTransformer(Transformer):
             # Handle backslash escape sequences
             if char_part.startswith("\\"):
                 if char_part.startswith("\\x"):
-                    # Hex escape: \x41\ or just \x41
+                    # Hex escape: \x41 or \x41\
                     if char_part.endswith("\\"):
                         hex_part = char_part[2:-1]  # Remove \x and trailing \
                     else:
                         hex_part = char_part[2:]  # Just remove \x
+
+                    # Validate hex digits
+                    if not hex_part:
+                        from vibeprolog.errors import raise_syntax_error
+                        raise_syntax_error("char_code/1", ValueError("empty hex sequence in character code"))
+
+                    # Check for invalid hex digits
+                    try:
+                        # This will raise ValueError for invalid hex digits
+                        int(hex_part, 16)
+                    except ValueError as e:
+                        from vibeprolog.errors import raise_syntax_error
+                        raise_syntax_error("char_code/1", e)
+
                     return Number(int(hex_part, 16))
                 elif char_part == "\\\\":
                     # Escaped backslash
@@ -485,8 +517,8 @@ class PrologParser:
             i += 1
         return ''.join(result)
 
-    def parse(self, text: str, context: str = "parse/1") -> list[Clause]:
-        """Parse Prolog source code and return list of clauses."""
+    def parse(self, text: str, context: str = "parse/1") -> list[Clause | Directive]:
+        """Parse Prolog source code and return list of clauses and directives."""
         try:
             text = self._strip_block_comments(text)
             return self.parser.parse(text)

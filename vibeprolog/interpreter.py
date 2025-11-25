@@ -3,14 +3,15 @@
 import io
 import sys
 from pathlib import Path
+from typing import Iterator
 
 from lark.exceptions import LarkError
 
 from vibeprolog.exceptions import PrologError, PrologThrow
 from vibeprolog.engine import CutException, PrologEngine
-from vibeprolog.parser import PrologParser
+from vibeprolog.parser import PrologParser, Clause, Directive
 from vibeprolog.terms import Compound, Variable
-from vibeprolog.unification import apply_substitution
+from vibeprolog.unification import Substitution, apply_substitution
 
 
 class PrologInterpreter:
@@ -21,6 +22,7 @@ class PrologInterpreter:
         self.clauses = []
         self._argv: list[str] = argv or []
         self.engine = None
+        self._initialization_goals: list[Compound] = []
 
     @property
     def argv(self) -> list[str]:
@@ -40,6 +42,68 @@ class PrologInterpreter:
         error_term = PrologError.syntax_error(str(exc), location)
         raise PrologThrow(error_term)
 
+    def _process_directive(self, directive: Directive) -> None:
+        """Process a directive, collecting initialization goals."""
+        from vibeprolog.terms import Atom
+
+        if isinstance(directive.goal, Compound) and directive.goal.functor == "initialization":
+            if len(directive.goal.args) != 1:
+                error_term = PrologError.type_error("callable", directive.goal, "initialization/1")
+                raise PrologThrow(error_term)
+
+            goal = directive.goal.args[0]
+
+            # Check if goal is a variable (instantiation error)
+            if isinstance(goal, Variable):
+                error_term = PrologError.instantiation_error("initialization/1")
+                raise PrologThrow(error_term)
+
+            # Check if goal is callable (not a number or other non-callable)
+            if not self._is_callable_term(goal):
+                error_term = PrologError.type_error("callable", goal, "initialization/1")
+                raise PrologThrow(error_term)
+
+            self._initialization_goals.append(goal)
+        # Other directives can be added here in the future
+
+    def _execute_initialization_goals(self) -> None:
+        """Execute collected initialization goals in order."""
+        for goal in self._initialization_goals:
+            # Execute the goal using the query mechanism
+            # We need to consume all solutions to ensure backtracking happens
+            # For initialization, we want exceptions to propagate
+            try:
+                # Consume all solutions to ensure the goal executes completely
+                for _ in self._query_for_initialization([goal]):
+                    pass
+            except Exception:
+                # Re-raise any exceptions from initialization goals
+                raise
+        # Clear the initialization goals after execution
+        self._initialization_goals.clear()
+
+    def _query_for_initialization(self, goals: list[Compound]) -> Iterator[Substitution]:
+        """Query that allows exceptions to propagate (for initialization goals)."""
+        # Don't catch PrologThrow for initialization goals
+        yield from self.engine._solve_goals(goals, Substitution())
+
+    def _is_callable_term(self, term) -> bool:
+        """Check if a term is callable (can be used as a goal)."""
+        from vibeprolog.terms import Atom, Number
+        from vibeprolog.parser import List
+
+        # Variables are not callable (checked separately)
+        if isinstance(term, Variable):
+            return False
+        # Numbers are not callable
+        if isinstance(term, Number):
+            return False
+        # Empty lists are not callable
+        if isinstance(term, List) and not term.elements and term.tail is None:
+            return False
+        # Atoms and compounds are callable
+        return True
+
     def consult(self, filepath: str | Path):
         """Load Prolog clauses from a file."""
         filepath = Path(filepath)
@@ -47,22 +111,44 @@ class PrologInterpreter:
             content = f.read()
 
         try:
-            clauses = self.parser.parse(content, "consult/1")
+            parsed_items = self.parser.parse(content, "consult/1")
         except (ValueError, LarkError) as exc:
             error_term = PrologError.syntax_error(str(exc), "consult/1")
             raise PrologThrow(error_term)
-        self.clauses.extend(clauses)
+
+        # Separate clauses from directives
+        for item in parsed_items:
+            if isinstance(item, Clause):
+                self.clauses.append(item)
+            elif isinstance(item, Directive):
+                self._process_directive(item)
+
         self.engine = PrologEngine(self.clauses, self.argv)
+
+        # Execute initialization goals after all clauses are loaded
+        if self._initialization_goals:
+            self._execute_initialization_goals()
 
     def consult_string(self, prolog_code: str):
         """Load Prolog clauses from a string."""
         try:
-            clauses = self.parser.parse(prolog_code, "consult/1")
+            parsed_items = self.parser.parse(prolog_code, "consult/1")
         except (ValueError, LarkError) as exc:
             error_term = PrologError.syntax_error(str(exc), "consult/1")
             raise PrologThrow(error_term)
-        self.clauses.extend(clauses)
+
+        # Separate clauses from directives
+        for item in parsed_items:
+            if isinstance(item, Clause):
+                self.clauses.append(item)
+            elif isinstance(item, Directive):
+                self._process_directive(item)
+
         self.engine = PrologEngine(self.clauses, self.argv)
+
+        # Execute initialization goals after all clauses are loaded
+        if self._initialization_goals:
+            self._execute_initialization_goals()
 
     def query(
         self, query_str: str, limit: int | None = None, capture_output: bool = False
