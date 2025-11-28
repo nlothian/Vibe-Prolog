@@ -22,10 +22,19 @@ def _checkout_and_get_current_branch(issue_number: str, config: IssueWorkflowCon
     run(["git", "pull"], capture_output=False)
     # Get current branch
     current_branch = run(["git", "branch", "--show-current"]).strip()
-    if config.use_new_branch:
-        # Always create a new branch for the issue
+
+    # Check if current branch is for this issue
+    issue_token = config.branch_prefix_token(issue_number)
+    is_issue_branch = issue_token in current_branch
+
+    # Create new branch if:
+    # 1. Explicitly requested via --newbranch
+    # 2. Not currently on a branch for this issue (e.g., on main)
+    if config.use_new_branch or not is_issue_branch:
         run(["gh", "issue", "develop", issue_number, "--checkout"], capture_output=False)
         return run(["git", "branch", "--show-current"]).strip()
+
+    # Already on an issue branch for this issue, use it
     return current_branch
 
 
