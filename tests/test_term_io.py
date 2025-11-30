@@ -3,6 +3,8 @@
 import io
 import sys
 import pytest
+from contextlib import redirect_stdout
+
 from vibeprolog import PrologInterpreter
 
 
@@ -29,12 +31,12 @@ class TestWriteTerm:
     """Tests for write_term/2-3 predicates."""
 
     def test_write_term_quoted(self, prolog: PrologInterpreter):
-        """Test write_term/2 with quoted option."""
-        result, had_output = prolog.query_once("write_term('needs quotes', [quoted(true)])", capture_output=True)
+        """Test write_term/2 with quoted option and capture stdout."""
+        s = io.StringIO()
+        with redirect_stdout(s):
+            result = prolog.query_once("write_term('needs quotes', [quoted(true)])")
         assert result == {}
-        assert had_output
-        # We can't easily capture the output, but the call should succeed
-        # In a real test environment, we'd need to redirect stdout
+        assert s.getvalue() == "'needs quotes'"
 
     def test_write_term_ignore_ops(self, prolog: PrologInterpreter):
         """Test write_term/2 with ignore_ops option."""

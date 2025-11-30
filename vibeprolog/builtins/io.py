@@ -650,7 +650,7 @@ class IOBuiltins:
             raise PrologThrow(error_term)
 
         # Use shared helper to parse options
-        parsed = IOBuiltins._builtin_parse_write_options(options_term, subst)
+        parsed = IOBuiltins._parse_write_term_options(options_term, subst)
         quoted = parsed["quoted"]
         ignore_ops = parsed["ignore_ops"]
         numbervars = parsed["numbervars"]
@@ -2007,8 +2007,7 @@ class IOBuiltins:
         args: BuiltinArgs, subst: Substitution, engine: EngineContext | None
     ) -> Substitution | None:
         """print/2 - Pretty-print to specified stream."""
-        # For now, print/2 is an alias for write/2.
-        # This can be changed later to support portray/1 hooks.
+        # Delegation recommended by review to avoid duplication
         return IOBuiltins._builtin_write_to_stream(args, subst, engine)
 
     @staticmethod
