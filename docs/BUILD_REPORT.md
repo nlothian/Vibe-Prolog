@@ -102,4 +102,11 @@ as a one-off won't work. In this case - after further discussion - this is what 
  - update FEATURES.md                                                                                                                                    │
                                                                                                                                                          │
  Don't include estimates or line numbers
-``
+```
+
+This raise these three issues:
+- https://github.com/nlothian/Vibe-Prolog/issues/268
+- https://github.com/nlothian/Vibe-Prolog/issues/269
+- https://github.com/nlothian/Vibe-Prolog/issues/270
+  
+It certianly did a better job raising them than I would have.
