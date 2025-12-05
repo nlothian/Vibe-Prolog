@@ -1,5 +1,16 @@
 # Build Report
 
+# What was easy
+
+Getting a working Prolog interpreter that could handle most basic code. 
+
+# What was hard
+
+I decided without much thought that this should be an ISO-Standard implementation. I later discovered the ISO standard is $800 which I'm not prepared to pay. ChatGPT seems to know it quite well (better than Claude) and I wonder if it has been trained on it. 
+
+I soon discoved most code relied on Prolog libraries which I didn't have. Without much though - again - I imported the (Scryer Prolog library)[https://github.com/mthom/scryer-prolog/tree/master/src/lib] to let me run programs and soon realized that library loading is completely non-standard.
+
+
 
 ## Things where AI didn't work
 
