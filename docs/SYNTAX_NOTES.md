@@ -106,6 +106,7 @@ Vibe-Prolog supports the Edinburgh `<radix>'<number>` notation for bases 2-36:
 | `\r` | Carriage return (CR) | `'\r'` | ✅ Supported |
 | `\t` | Tab | `'\t'` | ✅ Supported |
 | `\xHH` | Hex character code | `'\x41'` (A) | ✅ Supported |
+| `\OOO\` | Octal character code | `'\101\'` (A) | ✅ Supported |
 
 **Missing from Scryer-Prolog**:
 - `\a` (alert/bell) - not supported in Vibe

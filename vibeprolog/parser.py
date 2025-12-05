@@ -184,7 +184,7 @@ __OPERATOR_GRAMMAR__
     // Allow trailing quote (e.g., 0'\\') while keeping legacy forms without it; allow broader alphanumerics after \\x so lexer does not reject malformed hex sequences that should become syntax errors
     CHAR_CODE.5: /0'(\\x[0-9a-zA-Z]+\\?|\\\\|\\\\['tnr]|''|[^'\\])'?/ | /[1-9]\d*'.'/
 
-    STRING: /"([^"\\]|\\.)*"/ | /'(\\.|''|[^'\\])*'/
+    STRING: /"([^"\\]|\\[^"]*)*"/ | /'([^'\\]|\\[^']*|'' )*'/
     SPECIAL_ATOM: /'([^'\\]|\\.)+'/
 
     // Special atom operators must have HIGHEST priority to prevent being parsed as prefix operators
@@ -590,13 +590,30 @@ class PrologTransformer(Transformer):
             s = self._unescape_string(s)
         return Atom(s, quoted=True)
 
+    def _parse_octal_escape(self, match):
+        """Parse octal escape sequence like \101\ into character."""
+        inner = match.group(1)
+        if not all(c in '01234567' for c in inner):
+            raise PrologThrow(PrologError.syntax_error("invalid octal escape", "escape_sequence/1"))
+        try:
+            value = int(inner, 8)
+            if value > 255:
+                raise PrologThrow(PrologError.syntax_error("octal escape overflow", "escape_sequence/1"))
+            return chr(value)
+        except ValueError:
+            raise PrologThrow(PrologError.syntax_error("invalid octal escape", "escape_sequence/1"))
+
     def _unescape_string(self, s):
         """Handle backslash escape sequences."""
         # Process escape sequences in the correct order
         # Double backslash must be processed LAST to avoid interfering with other escapes
         # We use a placeholder to preserve \\
 
-        # First, temporarily replace \\ with a placeholder
+        # First, handle octal escapes
+        import re
+        s = re.sub(r'\\(\d{1,3})\\', self._parse_octal_escape, s)
+
+        # Then, temporarily replace \\ with a placeholder
         placeholder = "\x00BACKSLASH\x00"
         s = s.replace(r"\\", placeholder)
 
@@ -1576,9 +1593,9 @@ class PrologParser:
         operators = _merge_operators(
             self._base_operator_definitions(module_name), directive_ops
         )
-        key = tuple(operators)
+        grammar = self._build_grammar(operators)
+        key = grammar
         if key not in self._grammar_cache:
-            grammar = self._build_grammar(operators)
             self._grammar_cache[key] = self._create_parser(grammar)
         self.parser = self._grammar_cache[key]
 
