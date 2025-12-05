@@ -394,7 +394,7 @@ class TestOctalEscapes:
     def test_octal_escape_overflow(self):
         """Test that value > 255 raises syntax error."""
         parser = PrologParser()
-        with pytest.raises(Exception):  # Should raise PrologThrow with syntax_error
+        with pytest.raises(PrologThrow):  # Should raise PrologThrow with syntax_error
             parser.parse(r"test('\400\').")
 
     def test_octal_escape_empty(self):
