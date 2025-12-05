@@ -331,3 +331,75 @@ class TestRealWorldExamples:
         # The format/2 should handle the escape sequence
         assert result is not None
         assert '\n' in result['X'] or 'line1' in result['X']
+
+
+class TestOctalEscapes:
+    """Tests for octal escape sequences in quoted literals."""
+
+    def test_octal_escape_single_digit(self):
+        """Test octal escape with single digit."""
+        prolog = PrologInterpreter()
+        result = prolog.query_once(r"X = '\0\'.")
+        assert result is not None
+        assert result['X'] == '\x00'  # NUL character
+
+    def test_octal_escape_two_digits(self):
+        """Test octal escape with two digits."""
+        prolog = PrologInterpreter()
+        result = prolog.query_once(r"X = '\10\'.")
+        assert result is not None
+        assert result['X'] == '\x08'  # Backspace
+
+    def test_octal_escape_three_digits(self):
+        """Test octal escape with three digits."""
+        prolog = PrologInterpreter()
+        result = prolog.query_once(r"X = '\101\'.")
+        assert result is not None
+        assert result['X'] == 'A'  # ASCII 65
+
+    def test_octal_escape_in_double_quotes(self):
+        """Test octal escape in double-quoted strings."""
+        prolog = PrologInterpreter()
+        result = prolog.query_once(r'X = "\102\".')
+        assert result is not None
+        assert result['X'] == 'B'  # ASCII 66
+
+    def test_octal_escape_embedded(self):
+        """Test octal escape embedded in larger literal."""
+        prolog = PrologInterpreter()
+        result = prolog.query_once(r"X = 'foo\101\bar'.")
+        assert result is not None
+        assert result['X'] == 'fooAbar'
+
+    def test_octal_escape_max_value(self):
+        """Test octal escape with maximum valid value (255)."""
+        prolog = PrologInterpreter()
+        result = prolog.query_once(r"X = '\377\'.")
+        assert result is not None
+        assert result['X'] == '\xff'  # 255
+
+    def test_octal_escape_invalid_digit(self):
+        """Test that invalid octal digit raises syntax error."""
+        parser = PrologParser()
+        with pytest.raises(Exception):  # Should raise PrologThrow with syntax_error
+            parser.parse(r"test('\8\').")
+
+    def test_octal_escape_missing_terminator(self):
+        """Test that missing trailing backslash does not raise error (not parsed as octal)."""
+        parser = PrologParser()
+        # This should not raise error, as it's not recognized as octal escape
+        result = parser.parse(r"test('\101').")
+        assert result[0].head.args[0].name == r'\101'  # Remains unescaped
+
+    def test_octal_escape_overflow(self):
+        """Test that value > 255 raises syntax error."""
+        parser = PrologParser()
+        with pytest.raises(Exception):  # Should raise PrologThrow with syntax_error
+            parser.parse(r"test('\400\').")
+
+    def test_octal_escape_empty(self):
+        """Test that empty octal escape does not raise error."""
+        parser = PrologParser()
+        # This should not raise error
+        result = parser.parse(r"test('\\').")
+        assert result[0].head.args[0].name == '\\'  # The atom name
