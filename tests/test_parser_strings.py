@@ -3,6 +3,7 @@ Tests for parser string handling, including escape sequences and edge cases.
 """
 
 import pytest
+from vibeprolog.exceptions import PrologThrow
 from vibeprolog import PrologInterpreter
 from vibeprolog.parser import PrologParser, Clause
 from vibeprolog.terms import Atom
@@ -381,7 +382,7 @@ class TestOctalEscapes:
     def test_octal_escape_invalid_digit(self):
         """Test that invalid octal digit raises syntax error."""
         parser = PrologParser()
-        with pytest.raises(Exception):  # Should raise PrologThrow with syntax_error
+        with pytest.raises(PrologThrow):  # Should raise PrologThrow with syntax_error
             parser.parse(r"test('\8\').")
 
     def test_octal_escape_missing_terminator(self):

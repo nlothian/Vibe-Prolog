@@ -182,7 +182,7 @@ __OPERATOR_GRAMMAR__
     // Allow trailing quote (e.g., 0'\\') while keeping legacy forms without it; allow broader alphanumerics after \\x so lexer does not reject malformed hex sequences that should become syntax errors
     CHAR_CODE.5: /0'(\\x[0-9a-zA-Z]+\\?|\\\\|\\\\['tnr]|''|[^'\\])'?/ | /[1-9]\d*'.'/
 
-    STRING: /"([^"\\]|\\[^"]*)*"/ | /'([^'\\]|\\[^']*|'')*'/
+    STRING: /"([^"\\]|\\.*)*"/ | /'([^'\\]|\\.*|'')*'/
     SPECIAL_ATOM: /'([^'\\]|\\.)+'/
 
     // Special atom operators must have HIGHEST priority to prevent being parsed as prefix operators
@@ -606,7 +606,7 @@ class PrologTransformer(Transformer):
         # We use a placeholder to preserve \\
 
         # First, handle octal escapes
-        s = re.sub(r'\\([0-7]{1,3})\\', self._parse_octal_escape, s)
+        s = re.sub(r'\\(\d{1,3})\\', self._parse_octal_escape, s)
 
         # Then, temporarily replace \\ with a placeholder
         placeholder = "\x00BACKSLASH\x00"
