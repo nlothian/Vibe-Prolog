@@ -182,8 +182,8 @@ __OPERATOR_GRAMMAR__
     // Allow trailing quote (e.g., 0'\\') while keeping legacy forms without it; allow broader alphanumerics after \\x so lexer does not reject malformed hex sequences that should become syntax errors
     CHAR_CODE.5: /0'(\\x[0-9a-zA-Z]+\\?|\\\\|\\\\['tnr]|''|[^'\\])'?/ | /[1-9]\d*'.'/
 
-    STRING: /"([^"\\]|\\.*)*"/ | /'([^'\\]|\\.*|'')*'/
-    SPECIAL_ATOM: /'([^'\\]|\\.)+'/
+    STRING: /"([^"\\]|\\(?:\d{1,3}\\|.))*"/ | /'([^'\\]|\\(?:\d{1,3}\\|.)|'')*'/
+    SPECIAL_ATOM: /'([^'\\]|\\(?:\d{1,3}\\|.))+'/
 
     // Special atom operators must have HIGHEST priority to prevent being parsed as prefix operators
     SPECIAL_ATOM_OPS.12: /-\$/ | /\$-/
@@ -589,7 +589,7 @@ class PrologTransformer(Transformer):
         return Atom(s, quoted=True)
 
     def _parse_octal_escape(self, match):
-        """Parse octal escape sequence like \101\ into character."""
+        r"""Parse octal escape sequence like \101\ into character."""
         inner = match.group(1)
         try:
             value = int(inner, 8)
