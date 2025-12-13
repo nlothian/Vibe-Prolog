@@ -182,7 +182,7 @@ __OPERATOR_GRAMMAR__
     // Allow operator symbols as functors: ;(a,b), |(a,b), ,(a,b), ->(a,b), etc.
     operator_compound: operator_functor "(" args ")" -> operator_compound
     // Operators that can be used as functors when followed by (
-    operator_functor: INFIX_OP_FUNCTOR | CONTROL_OP_FUNCTOR | COMPARISON_OP_FUNCTOR | ARITH_OP_FUNCTOR | OP_SYMBOL
+    operator_functor: INFIX_OP_FUNCTOR
     // Infix operators like ;, |, ,, ->, etc.
     INFIX_OP_FUNCTOR.30: /;/ | /\|/ | /,/ | /->/ | /:/ | /=/ 
     // Control operators
@@ -192,8 +192,8 @@ __OPERATOR_GRAMMAR__
     // Arithmetic operators that can also be prefix/postfix - must be followed by ( for functor use
     ARITH_OP_FUNCTOR.30: /\+/ | /-/ | /\*/ | /\//
     // Parenthesized operator as atom: (;), (|), (,), (->), etc.
-    operator_as_atom: INFIX_OP_FUNCTOR | CONTROL_OP_FUNCTOR | COMPARISON_OP_FUNCTOR | ARITH_OP_FUNCTOR | OP_SYMBOL
-    operator_atom: OPERATOR_ATOM
+    operator_as_atom: INFIX_OP_FUNCTOR
+    operator_atom: OPERATOR_ATOM | operator_table_token
     args: term ("," term)*
 
     curly_braces: "{" term "}"
@@ -208,7 +208,7 @@ __OPERATOR_GRAMMAR__
     list_items: term ("," term)*
 
     string: STRING
-    atom: ATOM | SPECIAL_ATOM | SPECIAL_ATOM_OPS | OP_SYMBOL
+    atom: ATOM | SPECIAL_ATOM | SPECIAL_ATOM_OPS | OP_SYMBOL | COMPARISON_OP_FUNCTOR | CONTROL_OP_FUNCTOR | ARITH_OP_FUNCTOR
     variable: VARIABLE
     char_code: CHAR_CODE
     number: NUMBER
@@ -610,6 +610,10 @@ class PrologTransformer(Transformer):
         """Convert operator token to Atom."""
         token_str = str(items[0])
         return Atom(token_str)
+
+    def operator_table_token(self, items):
+        """Pass through dynamically generated operator tokens for atom handling."""
+        return items[0]
 
     def operator_functor(self, items):
         """Convert operator token to Atom for use as functor."""
@@ -1615,6 +1619,7 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
 
     rules: list[str] = []
     tokens: list[str] = []
+    operator_token_names: list[str] = []
 
     lower_rule = "primary"
     precedence_levels = sorted(grouped.keys())
@@ -1635,6 +1640,7 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
                 priority = _operator_token_priority(name)
                 token_def = f"{token}.{priority}" if priority else token
                 tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                operator_token_names.append(token)
                 parts.append(f"{lower_rule} {token} {lower_rule} -> infix_xfx")
         if infix_specs.get("yfx"):
             for name in sorted(infix_specs["yfx"]):
@@ -1643,6 +1649,7 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
                 priority = _operator_token_priority(name)
                 token_def = f"{token}.{priority}" if priority else token
                 tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                operator_token_names.append(token)
                 parts.append(f"{rule_name} {token} {lower_rule} -> infix_yfx")
         if infix_specs.get("xfy"):
             for name in sorted(infix_specs["xfy"]):
@@ -1651,6 +1658,7 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
                 priority = _operator_token_priority(name)
                 token_def = f"{token}.{priority}" if priority else token
                 tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                operator_token_names.append(token)
                 parts.append(f"{lower_rule} {token} {rule_name} -> infix_xfy")
         if infix_specs.get("yfy"):
             for name in sorted(infix_specs["yfy"]):
@@ -1659,6 +1667,7 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
                 priority = _operator_token_priority(name)
                 token_def = f"{token}.{priority}" if priority else token
                 tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                operator_token_names.append(token)
                 parts.append(f"{rule_name} {token} {rule_name} -> infix_yfy")
 
         if prefix_specs.get("fx"):
@@ -1668,6 +1677,7 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
                 priority = _operator_token_priority(name)
                 token_def = f"{token}.{priority}" if priority else token
                 tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                operator_token_names.append(token)
                 parts.append(f"{token} {lower_rule} -> prefix_fx")
         if prefix_specs.get("fy"):
             for name in sorted(prefix_specs["fy"]):
@@ -1676,6 +1686,7 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
                 priority = _operator_token_priority(name)
                 token_def = f"{token}.{priority}" if priority else token
                 tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                operator_token_names.append(token)
                 parts.append(f"{token} {rule_name} -> prefix_fy")
 
         if postfix_specs.get("xf"):
@@ -1685,6 +1696,7 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
                 priority = _operator_token_priority(name)
                 token_def = f"{token}.{priority}" if priority else token
                 tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                operator_token_names.append(token)
                 parts.append(f"{lower_rule} {token} -> postfix_xf")
         if postfix_specs.get("yf"):
             for name in sorted(postfix_specs["yf"]):
@@ -1693,6 +1705,7 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
                 priority = _operator_token_priority(name)
                 token_def = f"{token}.{priority}" if priority else token
                 tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                operator_token_names.append(token)
                 parts.append(f"{rule_name} {token} -> postfix_yf")
 
         rule_body = "\n        | ".join(parts)
@@ -1700,6 +1713,11 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
         lower_rule = rule_name
 
     rules.append(f"?term: {lower_rule}")
+    if operator_token_names:
+        token_union = " | ".join(operator_token_names)
+    else:
+        token_union = "OPERATOR_ATOM"
+    rules.append(f"operator_table_token: {token_union}")
     rules.extend(tokens)
 
     return "\n".join(rules) + "\n"

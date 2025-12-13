@@ -347,6 +347,25 @@ class TestQuotedAtomsAndStrings:
         atom = clauses[0].head.args[0]
         assert atom.name == ':-'
 
+    def test_operator_symbol_atoms_in_lalr(self):
+        """Graphic operator atoms should parse in LALR mode without fallback."""
+        parser = PrologParser(parser_backend="lalr")
+        clauses = parser.parse("test(@=<). test(=:=).")
+        first_atom = clauses[0].head.args[0]
+        second_atom = clauses[1].head.args[0]
+
+        assert first_atom.name == "@=<"
+        assert second_atom.name == "=:="
+
+    def test_operator_symbol_atoms_prefer_lalr_backend(self):
+        """Parsing operator atoms in auto mode should keep the LALR backend active."""
+        parser = PrologParser()
+        clauses = parser.parse("test(@=<).")
+        atom = clauses[0].head.args[0]
+
+        assert atom.name == "@=<"
+        assert parser._active_backend == "lalr"
+
     def test_capital_start_quoted_atom(self):
         """Test quoted atoms starting with capital letters"""
         parser = PrologParser()
