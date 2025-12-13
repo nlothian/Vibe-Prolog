@@ -2145,9 +2145,6 @@ class PrologParser:
             # Associate PlDoc comments with items
             self._associate_pldoc_comments(parsed_items, pldoc_comments)
             return parsed_items
-        except GrammarError as e:
-            error_term = PrologError.syntax_error(str(e), context)
-            raise PrologThrow(error_term)
         except (UnexpectedToken, UnexpectedCharacters) as e:
             # If the lexer/parser choked inside a char code hex escape like 0'\x4G,
             # surface the ISO-style unexpected_char error rather than the raw Lark token message.
@@ -2163,9 +2160,6 @@ class PrologParser:
             # We handle these specific Lark errors here so they are normalized to
             # `PrologThrow` before control leaves the try; otherwise the outer
             # `LarkError` handler never runs and tests break.
-            raise PrologThrow(error_term)
-        except GrammarError as e:
-            error_term = PrologError.syntax_error(str(e), context)
             raise PrologThrow(error_term)
         except LarkError as e:
             # Convert Lark parse error to Prolog syntax_error
