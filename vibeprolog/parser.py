@@ -395,6 +395,15 @@ class PrologTransformer(Transformer):
         else:
             return [compound]
 
+    def _rebuild_comma_chain(self, terms):
+        """Rebuild a right-associative comma chain from collected terms."""
+        if not terms:
+            return None
+        result = terms[-1]
+        for term in reversed(terms[:-1]):
+            result = Compound(",", (term, result))
+        return result
+
     @v_args(meta=True)
     def fact(self, meta, items):
         return Clause(head=items[0], body=None, meta=meta)
@@ -421,6 +430,22 @@ class PrologTransformer(Transformer):
                 result.extend(self._collect_comma_terms(item))
             else:
                 result.append(item)
+
+        # When a leading conjunction was captured as part of a disjunction,
+        # peel off the first goal to match the intended goal separation.
+        if len(result) == 1:
+            candidate = result[0]
+            if isinstance(candidate, Compound) and candidate.functor == ';':
+                left, right = candidate.args
+                if isinstance(left, (Compound, ParenthesizedComma)) and getattr(left, "functor", None) == ',':
+                    leading_terms = self._collect_comma_terms(left)
+                    if len(leading_terms) >= 2:
+                        first_goal = leading_terms[0]
+                        if isinstance(first_goal, List):
+                            return result
+                        rebuilt_left = self._rebuild_comma_chain(leading_terms[1:])
+                        if rebuilt_left is not None:
+                            result = [first_goal, Compound(";", (rebuilt_left, right))]
         return result
 
     def term(self, items):
