@@ -1881,6 +1881,7 @@ class PrologParser:
             ("lalr", "earley") if preferred_backend == "auto" else (preferred_backend,)
         )
 
+        grammar: str | None = None
         for candidate in backend_order:
             cache_key = self._parser_cache_key(operators, module_name, candidate)
             cached_parser = self._parser_cache.get(cache_key)
@@ -1889,22 +1890,22 @@ class PrologParser:
                 self._active_backend = candidate
                 return
 
-        grammar = self._build_grammar(operators)
-        for candidate in backend_order:
-            cache_key = self._parser_cache_key(operators, module_name, candidate)
+            if grammar is None:
+                grammar = self._build_grammar(operators)
+
             try:
                 candidate_grammar = self._prepare_grammar_for_backend(
                     grammar, candidate
                 )
                 parser = self._create_parser(candidate_grammar, backend=candidate)
+                self._parser_cache[cache_key] = parser
+                self.parser = parser
+                self._active_backend = candidate
+                return
             except GrammarError:
                 if preferred_backend != "auto":
                     raise
                 continue
-            self._parser_cache[cache_key] = parser
-            self.parser = parser
-            self._active_backend = candidate
-            return
 
         raise GrammarError("Could not build a parser with any available backend")
 
