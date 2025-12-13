@@ -1,13 +1,13 @@
 # Vibe-Prolog Library Loading Status
 
-**Test Date:** 2025-12-11 19:45:12 UTC
+**Test Date:** 2025-12-11 23:36:57 UTC
 
 ## Summary
 
 - **Total Files:** 63
-- **Loaded Successfully:** 39
-- **Failed to Load:** 24
-- **Success Rate:** 39/63 (61%)
+- **Loaded Successfully:** 40
+- **Failed to Load:** 23
+- **Success Rate:** 40/63 (63%)
 
 ## Successfully Loaded Files ✅
 
@@ -50,6 +50,7 @@
 - `library/test_module.pl`
 - `library/tls.pl`
 - `library/wasm.pl`
+- `library/xpath.pl`
 
 ## Failed to Load Files ❌
 
@@ -175,31 +176,31 @@ PrologThrow: error(syntax_error(No terminal matches 'δ' in the current parser c
               ,δ_inverses_t/5
                ^
 Expected one of: 
-	* PREFIX_FY_200_3
-	* _LBRA
-	* SPECIAL_ATOM
-	* COMPARISON_OP_FUNCTOR
+	* INFIX_OP_FUNCTOR
 	* OPERATOR_ATOM
+	* ARITH_OP_FUNCTOR
+	* COMPARISON_OP_FUNCTOR
+	* PREFIX_FY_200_4
+	* PREFIX_FY_900_45
 	* INFIX_YFX_500_16
+	* _LPAR
 	* SPECIAL_ATOM_OPS
 	* CONTROL_OP_FUNCTOR
-	* PREFIX_FX_1200_54
-	* PREFIX_FY_200_4
-	* PREFIX_FX_1200_53
-	* VARIABLE
-	* PREFIX_FX_1150_50
-	* ARITH_OP_FUNCTOR
-	* CHAR_CODE
-	* _LBRACE
-	* OP_SYMBOL
-	* PREFIX_FY_900_45
-	* ATOM
-	* PREFIX_FX_700_44
-	* INFIX_OP_FUNCTOR
-	* STRING
+	* _LBRA
+	* PREFIX_FY_200_3
 	* BANG
-	* _LPAR
+	* OP_SYMBOL
+	* PREFIX_FX_1200_54
 	* NUMBER
+	* SPECIAL_ATOM
+	* PREFIX_FX_1150_50
+	* CHAR_CODE
+	* VARIABLE
+	* PREFIX_FX_700_44
+	* STRING
+	* PREFIX_FX_1200_53
+	* _LBRACE
+	* ATOM
 ), context(consult/1))
 ```
 
@@ -216,31 +217,31 @@ PrologThrow: error(syntax_error(No terminal matches 'δ' in the current parser c
               ,δ_inverses_t/5
                ^
 Expected one of: 
-	* PREFIX_FY_200_3
-	* _LBRA
-	* SPECIAL_ATOM
-	* COMPARISON_OP_FUNCTOR
+	* INFIX_OP_FUNCTOR
 	* OPERATOR_ATOM
+	* ARITH_OP_FUNCTOR
+	* COMPARISON_OP_FUNCTOR
+	* PREFIX_FY_200_4
+	* PREFIX_FY_900_45
 	* INFIX_YFX_500_16
+	* _LPAR
 	* SPECIAL_ATOM_OPS
 	* CONTROL_OP_FUNCTOR
-	* PREFIX_FX_1200_54
-	* PREFIX_FY_200_4
-	* PREFIX_FX_1200_53
-	* VARIABLE
-	* PREFIX_FX_1150_50
-	* ARITH_OP_FUNCTOR
-	* CHAR_CODE
-	* _LBRACE
-	* OP_SYMBOL
-	* PREFIX_FY_900_45
-	* ATOM
-	* PREFIX_FX_700_44
-	* INFIX_OP_FUNCTOR
-	* STRING
+	* _LBRA
+	* PREFIX_FY_200_3
 	* BANG
-	* _LPAR
+	* OP_SYMBOL
+	* PREFIX_FX_1200_54
 	* NUMBER
+	* SPECIAL_ATOM
+	* PREFIX_FX_1150_50
+	* CHAR_CODE
+	* VARIABLE
+	* PREFIX_FX_700_44
+	* STRING
+	* PREFIX_FX_1200_53
+	* _LBRACE
+	* ATOM
 ), context(consult/1))
 ```
 
@@ -268,30 +269,30 @@ PrologThrow: error(syntax_error(No terminal matches 't' in the current parser co
         ;/* R2 = (=),   Item == X2 */ true
                                       ^
 Expected one of: 
-	* INFIX_YFX_400_9
-	* INFIX_XFY_600_19
-	* INFIX_XFY_1050_47
 	* _RPAR
-	* INFIX_YFX_500_17
-	* INFIX_YFX_500_16
-	* INFIX_XFY_1100_48
-	* INFIX_YFX_400_6
-	* INFIX_YFX_500_15
-	* INFIX_XFX_450_14
 	* INFIX_YFX_400_12
-	* INFIX_XFX_1200_50
-	* INFIX_XFY_200_1
-	* INFIX_XFY_200_2
-	* INFIX_XFY_1000_46
-	* INFIX_YFX_400_5
-	* INFIX_YFX_500_18
+	* INFIX_XFY_1050_47
+	* INFIX_YFX_400_7
 	* INFIX_YFX_400_11
+	* INFIX_YFX_400_8
+	* INFIX_YFX_500_17
+	* INFIX_YFX_400_5
+	* INFIX_XFY_200_1
+	* INFIX_YFX_500_16
+	* _LPAR
+	* INFIX_XFY_1000_46
+	* INFIX_YFX_500_15
 	* INFIX_YFX_400_13
 	* INFIX_YFX_400_10
 	* INFIX_XFX_1200_51
-	* INFIX_YFX_400_8
-	* INFIX_YFX_400_7
-	* _LPAR
+	* INFIX_XFX_450_14
+	* INFIX_XFX_1200_50
+	* INFIX_YFX_400_6
+	* INFIX_XFY_600_19
+	* INFIX_YFX_500_18
+	* INFIX_YFX_400_9
+	* INFIX_XFY_1100_48
+	* INFIX_XFY_200_2
 ), context(consult/1))
 ```
 
@@ -374,30 +375,30 @@ PrologThrow: error(syntax_error(No terminal matches 't' in the current parser co
         ;/* R2 = (=),   Item == X2 */ true
                                       ^
 Expected one of: 
-	* INFIX_YFX_400_9
-	* INFIX_XFY_600_19
-	* INFIX_XFY_1050_47
 	* _RPAR
-	* INFIX_YFX_500_17
-	* INFIX_YFX_500_16
-	* INFIX_XFY_1100_48
-	* INFIX_YFX_400_6
-	* INFIX_YFX_500_15
-	* INFIX_XFX_450_14
 	* INFIX_YFX_400_12
-	* INFIX_XFX_1200_50
-	* INFIX_XFY_200_1
-	* INFIX_XFY_200_2
-	* INFIX_XFY_1000_46
-	* INFIX_YFX_400_5
-	* INFIX_YFX_500_18
+	* INFIX_XFY_1050_47
+	* INFIX_YFX_400_7
 	* INFIX_YFX_400_11
+	* INFIX_YFX_400_8
+	* INFIX_YFX_500_17
+	* INFIX_YFX_400_5
+	* INFIX_XFY_200_1
+	* INFIX_YFX_500_16
+	* _LPAR
+	* INFIX_XFY_1000_46
+	* INFIX_YFX_500_15
 	* INFIX_YFX_400_13
 	* INFIX_YFX_400_10
 	* INFIX_XFX_1200_51
-	* INFIX_YFX_400_8
-	* INFIX_YFX_400_7
-	* _LPAR
+	* INFIX_XFX_450_14
+	* INFIX_XFX_1200_50
+	* INFIX_YFX_400_6
+	* INFIX_XFY_600_19
+	* INFIX_YFX_500_18
+	* INFIX_YFX_400_9
+	* INFIX_XFY_1100_48
+	* INFIX_XFY_200_2
 ), context(consult/1))
 ```
 
@@ -414,17 +415,6 @@ File loading exceeded 30 seconds
 
 
 ### library/when.pl
-
-**Status:** ❌ Timeout
-
-**Details:**
-
-```
-File loading exceeded 30 seconds
-```
-
-
-### library/xpath.pl
 
 **Status:** ❌ Timeout
 
@@ -462,6 +452,5 @@ The following library files have issues that should be investigated and addresse
 1. **library/ugraphs.pl** - ❌ Prolog error
 1. **library/uuid.pl** - ❌ Timeout
 1. **library/when.pl** - ❌ Timeout
-1. **library/xpath.pl** - ❌ Timeout
 
 These issues should be converted into GitHub issues with the details provided above.
