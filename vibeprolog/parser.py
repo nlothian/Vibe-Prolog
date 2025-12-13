@@ -3,7 +3,7 @@
 import re
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
 from lark import Lark, Transformer, v_args
 from lark.exceptions import GrammarError, LarkError, UnexpectedCharacters, UnexpectedToken
@@ -2076,6 +2076,16 @@ class PrologParser:
                     payload.doc = last_comment_text
                 last_comment_text = None
 
+    def _with_fallback(self, do_parse: Callable[[str | None], Any]):
+        """Invoke a parsing function and fall back to Earley when appropriate."""
+
+        try:
+            return do_parse(None)
+        except (UnexpectedToken, UnexpectedCharacters, GrammarError):
+            if self._preferred_backend == "auto" and self._active_backend == "lalr":
+                return do_parse("earley")
+            raise
+
     def parse(
         self,
         text: str,
@@ -2136,13 +2146,7 @@ class PrologParser:
                     items.extend(folded)
                 return items
 
-            try:
-                parsed_items = parse_with_backend(None)
-            except (UnexpectedToken, UnexpectedCharacters, GrammarError):
-                if self._preferred_backend == "auto" and self._active_backend == "lalr":
-                    parsed_items = parse_with_backend("earley")
-                else:
-                    raise
+            parsed_items = self._with_fallback(parse_with_backend)
             # Associate PlDoc comments with items
             self._associate_pldoc_comments(parsed_items, pldoc_comments)
             return parsed_items
@@ -2228,12 +2232,7 @@ class PrologParser:
                         return compound.args[0]
                 raise ValueError(f"Failed to parse term: {text}")
 
-            try:
-                return parse_term_with_backend(None)
-            except (UnexpectedToken, UnexpectedCharacters, GrammarError):
-                if self._preferred_backend == "auto" and self._active_backend == "lalr":
-                    return parse_term_with_backend("earley")
-                raise
+            return self._with_fallback(parse_term_with_backend)
         except GrammarError as e:
             error_term = PrologError.syntax_error(str(e), context)
             raise PrologThrow(error_term)
