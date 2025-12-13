@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Iterable
 
 from lark import Lark, Transformer, v_args
-from lark.exceptions import LarkError, UnexpectedCharacters, UnexpectedToken
+from lark.exceptions import GrammarError, LarkError, UnexpectedCharacters, UnexpectedToken
 
 from vibeprolog.exceptions import PrologError, PrologThrow
 from vibeprolog.operator_defaults import DEFAULT_OPERATORS
@@ -221,8 +221,8 @@ __OPERATOR_GRAMMAR__
     // following tokens like the clause terminator.
     CHAR_CODE.5: /0'(?:''|\\x[0-9A-Fa-f]+\\?|\\u[0-9A-Fa-f]{4}|\\[0-7]{1,3}|\\[abdefnrstvs\\\"']|[^'\\])'?/ | /[1-9]\d*'.'/
 
-    STRING: /(?s)"(\\.|[^"])*"/
-    SPECIAL_ATOM: /(?s)'(\\.|''|[^'])*'/
+    STRING: /(?s:"(\\.|[^"])*")/
+    SPECIAL_ATOM: /(?s:'(\\.|''|[^'])*')/
 
     // Special atom operators must have HIGHEST priority to prevent being parsed as prefix operators
     SPECIAL_ATOM_OPS.12: /-\$/ | /\$-/
@@ -1683,15 +1683,21 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
 class PrologParser:
     """Parse Prolog source code with support for dynamic operators."""
 
-    def __init__(self, operator_table=None):
+    def __init__(self, operator_table=None, *, parser_backend: str = "auto"):
+        if parser_backend not in {"auto", "lalr", "earley"}:
+            raise ValueError(f"Unsupported parser backend: {parser_backend}")
         self.operator_table = operator_table
         # Character conversion table: maps single chars to single chars
         # Initially identity (no conversions active)
         self._char_conversions: dict[str, str] = {}
-        self.parser = None
-        # Cache parsers keyed by module context and operator signature so we do
-        # not rebuild the Earley grammar for every clause/directive.
-        self._parser_cache: dict[tuple[str | None, tuple[tuple[int, str, str], ...]], Lark] = {}
+        self.parser: Lark | None = None
+        self._active_backend: str | None = None
+        self._preferred_backend = parser_backend
+        # Cache parsers keyed by module context, operator signature, and backend
+        # so we do not rebuild the grammar for every clause/directive.
+        self._parser_cache: dict[
+            tuple[str | None, tuple[tuple[int, str, str], ...], str], Lark
+        ] = {}
 
     def set_char_conversion(self, from_char: str, to_char: str) -> None:
         """Set a character conversion.
@@ -1772,14 +1778,29 @@ class PrologParser:
         
         return ''.join(result)
 
-    def _create_parser(self, grammar: str):
-        return Lark(
-            grammar,
-            parser="earley",
-            propagate_positions=True,
-            ambiguity='resolve',
-            start=["start", "clause", "directive"],
-        )
+    def _create_parser(self, grammar: str, *, backend: str) -> Lark:
+        if backend == "lalr":
+            parser = Lark(
+                grammar,
+                parser="lalr",
+                lexer="contextual",
+                propagate_positions=True,
+                maybe_placeholders=False,
+                start=["start", "clause", "directive"],
+            )
+        elif backend == "earley":
+            parser = Lark(
+                grammar,
+                parser="earley",
+                propagate_positions=True,
+                ambiguity="resolve",
+                start=["start", "clause", "directive"],
+            )
+        else:
+            raise ValueError(f"Unknown parser backend: {backend}")
+
+        parser.prolog_backend = backend
+        return parser
 
     def _base_operator_definitions(
         self, module_name: str | None = None
@@ -1796,17 +1817,32 @@ class PrologParser:
         operator_rules = generate_operator_rules(operators)
         return PROLOG_GRAMMAR_TEMPLATE.replace("{UNICODE_LETTER_RANGES}", UNICODE_LETTER_RANGES).replace("__OPERATOR_GRAMMAR__", operator_rules)
 
+    def _prepare_grammar_for_backend(self, grammar: str, backend: str) -> str:
+        if backend != "lalr":
+            return grammar
+
+        return grammar.replace(
+            "atom: ATOM | SPECIAL_ATOM | SPECIAL_ATOM_OPS | OP_SYMBOL",
+            "atom: ATOM | SPECIAL_ATOM",
+        )
+
     def _parser_cache_key(
-        self, operators: list[tuple[int, str, str]], module_name: str | None
-    ) -> tuple[str | None, tuple[tuple[int, str, str], ...]]:
-        return (module_name, tuple(operators))
+        self,
+        operators: list[tuple[int, str, str]],
+        module_name: str | None,
+        backend: str,
+    ) -> tuple[str | None, tuple[tuple[int, str, str], ...], str]:
+        return (module_name, tuple(operators), backend)
 
     def _ensure_parser(
         self,
         cleaned_text: str,
         directive_ops: list[tuple[int, str, str]] | None = None,
         module_name: str | None = None,
+        backend: str | None = None,
     ) -> None:
+        if backend is not None and backend not in {"auto", "lalr", "earley"}:
+            raise ValueError(f"Unsupported parser backend: {backend}")
         if directive_ops is None:
             try:
                 directive_ops = extract_op_directives(cleaned_text)
@@ -1815,13 +1851,37 @@ class PrologParser:
         operators = _merge_operators(
             self._base_operator_definitions(module_name), directive_ops
         )
-        cache_key = self._parser_cache_key(operators, module_name)
-        cached_parser = self._parser_cache.get(cache_key)
-        if cached_parser is None:
-            grammar = self._build_grammar(operators)
-            cached_parser = self._create_parser(grammar)
-            self._parser_cache[cache_key] = cached_parser
-        self.parser = cached_parser
+        preferred_backend = backend or self._preferred_backend
+        backend_order = (
+            ("lalr", "earley") if preferred_backend == "auto" else (preferred_backend,)
+        )
+
+        for candidate in backend_order:
+            cache_key = self._parser_cache_key(operators, module_name, candidate)
+            cached_parser = self._parser_cache.get(cache_key)
+            if cached_parser is not None:
+                self.parser = cached_parser
+                self._active_backend = candidate
+                return
+
+        grammar = self._build_grammar(operators)
+        for candidate in backend_order:
+            cache_key = self._parser_cache_key(operators, module_name, candidate)
+            try:
+                candidate_grammar = self._prepare_grammar_for_backend(
+                    grammar, candidate
+                )
+                parser = self._create_parser(candidate_grammar, backend=candidate)
+            except GrammarError:
+                if preferred_backend != "auto":
+                    raise
+                continue
+            self._parser_cache[cache_key] = parser
+            self.parser = parser
+            self._active_backend = candidate
+            return
+
+        raise GrammarError("Could not build a parser with any available backend")
 
     def _strip_block_comments(self, text: str) -> tuple[str, list[tuple[int, str]]]:
         """Strip block comments from text, handling nesting and quoted strings.
@@ -2013,45 +2073,56 @@ class PrologParser:
             if apply_char_conversions:
                 text = self._apply_char_conversions(text)
             cleaned_text, pldoc_comments = self._collect_pldoc_comments(text)
-            self._ensure_parser(cleaned_text, directive_ops, module_name)
-            transformer = PrologTransformer()
             parsed_items: list[Clause | Directive] = []
 
-            # Parse each clause/directive separately to avoid Earley state explosion
-            # on large files with many clauses.
-            statements = tokenize_prolog_statements(cleaned_text)
-            search_pos = 0
-            for statement in statements:
-                # Track position of the statement within the cleaned text so that
-                # PlDoc association via start_pos still works.
-                stmt_pos = cleaned_text.find(statement, search_pos)
-                if stmt_pos == -1:
-                    raise RuntimeError(
-                        f"Could not re-locate tokenized statement in text: {statement!r}"
-                    )
-                search_pos = stmt_pos + len(statement)
+            def parse_with_backend(backend_override: str | None) -> list[Clause | Directive]:
+                self._ensure_parser(cleaned_text, directive_ops, module_name, backend_override)
+                transformer = PrologTransformer()
+                items: list[Clause | Directive] = []
 
-                stripped = statement.lstrip()
-                start_rule = "directive" if stripped.startswith(":-") else "clause"
-                try:
-                    tree = self.parser.parse(statement, start=start_rule)
-                except LarkError:
-                    tree = self.parser.parse(statement, start="start")
-                transformed = transformer.transform(tree)
-                if isinstance(transformed, list):
-                    parsed = transformed
+                statements = tokenize_prolog_statements(cleaned_text)
+                search_pos = 0
+                for statement in statements:
+                    stmt_pos = cleaned_text.find(statement, search_pos)
+                    if stmt_pos == -1:
+                        raise RuntimeError(
+                            f"Could not re-locate tokenized statement in text: {statement!r}"
+                        )
+                    search_pos = stmt_pos + len(statement)
+
+                    stripped = statement.lstrip()
+                    start_rule = "directive" if stripped.startswith(":-") else "clause"
+                    try:
+                        tree = self.parser.parse(statement, start=start_rule)
+                    except LarkError:
+                        tree = self.parser.parse(statement, start="start")
+                    transformed = transformer.transform(tree)
+                    if isinstance(transformed, list):
+                        parsed = transformed
+                    else:
+                        parsed = [transformed]
+
+                    folded = [self._fold_numeric_unary_minus(item) for item in parsed]
+                    for item in folded:
+                        meta = getattr(item, "meta", None)
+                        if meta is not None and hasattr(meta, "start_pos"):
+                            meta.start_pos += stmt_pos
+                    items.extend(folded)
+                return items
+
+            try:
+                parsed_items = parse_with_backend(None)
+            except (UnexpectedToken, UnexpectedCharacters, GrammarError):
+                if self._preferred_backend == "auto" and self._active_backend == "lalr":
+                    parsed_items = parse_with_backend("earley")
                 else:
-                    parsed = [transformed]
-
-                items = [self._fold_numeric_unary_minus(item) for item in parsed]
-                for item in items:
-                    meta = getattr(item, "meta", None)
-                    if meta is not None and hasattr(meta, "start_pos"):
-                        meta.start_pos += stmt_pos
-                parsed_items.extend(items)
+                    raise
             # Associate PlDoc comments with items
             self._associate_pldoc_comments(parsed_items, pldoc_comments)
             return parsed_items
+        except GrammarError as e:
+            error_term = PrologError.syntax_error(str(e), context)
+            raise PrologThrow(error_term)
         except (UnexpectedToken, UnexpectedCharacters) as e:
             # If the lexer/parser choked inside a char code hex escape like 0'\x4G,
             # surface the ISO-style unexpected_char error rather than the raw Lark token message.
@@ -2067,6 +2138,9 @@ class PrologParser:
             # We handle these specific Lark errors here so they are normalized to
             # `PrologThrow` before control leaves the try; otherwise the outer
             # `LarkError` handler never runs and tests break.
+            raise PrologThrow(error_term)
+        except GrammarError as e:
+            error_term = PrologError.syntax_error(str(e), context)
             raise PrologThrow(error_term)
         except LarkError as e:
             # Convert Lark parse error to Prolog syntax_error
@@ -2122,15 +2196,27 @@ class PrologParser:
             if apply_char_conversions:
                 clause_text = self._apply_char_conversions(clause_text)
             cleaned_text, _ = self._collect_pldoc_comments(clause_text)
-            self._ensure_parser(cleaned_text)
-            tree = self.parser.parse(cleaned_text, start="start")
             transformer = PrologTransformer()
-            result = transformer.transform(tree)
-            if result and isinstance(result[0], Clause):
-                compound = result[0].head
-                if isinstance(compound, Compound) and compound.args:
-                    return compound.args[0]
-            raise ValueError(f"Failed to parse term: {text}")
+
+            def parse_term_with_backend(backend_override: str | None):
+                self._ensure_parser(cleaned_text, backend=backend_override)
+                tree = self.parser.parse(cleaned_text, start="start")
+                transformed = transformer.transform(tree)
+                if transformed and isinstance(transformed[0], Clause):
+                    compound = transformed[0].head
+                    if isinstance(compound, Compound) and compound.args:
+                        return compound.args[0]
+                raise ValueError(f"Failed to parse term: {text}")
+
+            try:
+                return parse_term_with_backend(None)
+            except (UnexpectedToken, UnexpectedCharacters, GrammarError):
+                if self._preferred_backend == "auto" and self._active_backend == "lalr":
+                    return parse_term_with_backend("earley")
+                raise
+        except GrammarError as e:
+            error_term = PrologError.syntax_error(str(e), context)
+            raise PrologThrow(error_term)
         except LarkError as e:
             # Convert Lark parse error to Prolog syntax_error
             error_term = PrologError.syntax_error(str(e), context)
