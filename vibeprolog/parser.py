@@ -225,7 +225,7 @@ __OPERATOR_GRAMMAR__
     SPECIAL_ATOM: /(?s:'(\\.|''|[^'])*')/
 
     // Special atom operators must have HIGHEST priority to prevent being parsed as prefix operators
-    SPECIAL_ATOM_OPS.12: /-\$/ | /\$-/
+    SPECIAL_ATOM_OPS.35: /-\$/ | /\$-/
 
     // Scientific notation, hex, octal, binary, Edinburgh <radix>'<number>
     NUMBER.4: /-?0x[0-9a-fA-F]+/i
@@ -1559,7 +1559,10 @@ def _operator_token_priority(name: str) -> int:
         return 0
 
     if len(name) == 1:
-        return 0
+        # Single-character graphic operators (like '-') must outrank the
+        # generic arithmetic functor tokens so unary parsing keeps the
+        # operator table's precedence and associativity.
+        return 31
 
     if name in {":-", "-->", "?-"}:
         return 0
@@ -1633,6 +1636,25 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
         prefix_specs = grouped[precedence]["prefix"]
         postfix_specs = grouped[precedence]["postfix"]
 
+        if prefix_specs.get("fx"):
+            for name in sorted(prefix_specs["fx"]):
+                token_counter += 1
+                token = f"PREFIX_FX_{precedence}_{token_counter}"
+                priority = _operator_token_priority(name) + 1
+                token_def = f"{token}.{priority}" if priority else token
+                tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                operator_token_names.append(token)
+                parts.append(f"{token} {lower_rule} -> prefix_fx")
+        if prefix_specs.get("fy"):
+            for name in sorted(prefix_specs["fy"]):
+                token_counter += 1
+                token = f"PREFIX_FY_{precedence}_{token_counter}"
+                priority = _operator_token_priority(name) + 1
+                token_def = f"{token}.{priority}" if priority else token
+                tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                operator_token_names.append(token)
+                parts.append(f"{token} {rule_name} -> prefix_fy")
+
         if infix_specs.get("xfx"):
             for name in sorted(infix_specs["xfx"]):
                 token_counter += 1
@@ -1669,25 +1691,6 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
                 tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
                 operator_token_names.append(token)
                 parts.append(f"{rule_name} {token} {rule_name} -> infix_yfy")
-
-        if prefix_specs.get("fx"):
-            for name in sorted(prefix_specs["fx"]):
-                token_counter += 1
-                token = f"PREFIX_FX_{precedence}_{token_counter}"
-                priority = _operator_token_priority(name)
-                token_def = f"{token}.{priority}" if priority else token
-                tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
-                operator_token_names.append(token)
-                parts.append(f"{token} {lower_rule} -> prefix_fx")
-        if prefix_specs.get("fy"):
-            for name in sorted(prefix_specs["fy"]):
-                token_counter += 1
-                token = f"PREFIX_FY_{precedence}_{token_counter}"
-                priority = _operator_token_priority(name)
-                token_def = f"{token}.{priority}" if priority else token
-                tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
-                operator_token_names.append(token)
-                parts.append(f"{token} {rule_name} -> prefix_fy")
 
         if postfix_specs.get("xf"):
             for name in sorted(postfix_specs["xf"]):
