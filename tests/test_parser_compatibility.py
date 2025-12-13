@@ -185,7 +185,7 @@ class TestCutAndNegation:
         assert clauses[0].body[2].name == 'b'
 
     def test_negation_prefix(self):
-        """Test negation \+ as prefix operator"""
+        r"""Test negation \+ as prefix operator"""
         parser = PrologParser()
         clauses = parser.parse("test :- \\+ q.")
         body = clauses[0].body[0]
@@ -194,7 +194,7 @@ class TestCutAndNegation:
         assert len(body.args) == 1
 
     def test_negation_with_cut(self):
-        """Test negation and cut together: p :- \+ q, !, r."""
+        r"""Test negation and cut together: p :- \+ q, !, r."""
         parser = PrologParser()
         clauses = parser.parse("test :- \\+ q, !, r.")
         # Body is a flattened list of goals
@@ -213,7 +213,7 @@ class TestCutAndNegation:
         assert isinstance(r_goal, Atom) and r_goal.name == 'r'
 
     def test_negation_in_parentheses(self):
-        """Test negation in parentheses: p :- (\+ q ; r), !."""
+        r"""Test negation in parentheses: p :- (\+ q ; r), !."""
         parser = PrologParser()
         clauses = parser.parse("test :- (\\+ q ; r), !.")
         # Body is a flattened list of goals
