@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-12-13T12:12:24.703466",
+  "timestamp": "2025-12-13T16:18:21.259644",
   "results": {
     "library/$project_atts.pl": {
       "success": true,
@@ -37,14 +37,14 @@
       "detailed_msg": ""
     },
     "library/clpb.pl": {
-      "success": false,
-      "short_msg": "\u274c Timeout",
-      "detailed_msg": "File loading exceeded 30 seconds"
+      "success": true,
+      "short_msg": "\u2705 Loaded successfully",
+      "detailed_msg": ""
     },
     "library/clpz.pl": {
       "success": false,
-      "short_msg": "\u274c Timeout",
-      "detailed_msg": "File loading exceeded 30 seconds"
+      "short_msg": "\u274c Prolog error",
+      "detailed_msg": "PrologThrow: error(permission_error(modify, static_procedure, /(goal_expansion, 2)), context(consult/1))"
     },
     "library/cont.pl": {
       "success": true,
@@ -53,13 +53,13 @@
     },
     "library/crypto.pl": {
       "success": false,
-      "short_msg": "\u274c Timeout",
-      "detailed_msg": "File loading exceeded 30 seconds"
+      "short_msg": "\u274c Prolog error",
+      "detailed_msg": "PrologThrow: error(permission_error(modify, static_procedure, /(goal_expansion, 2)), context(consult/1))"
     },
     "library/csv.pl": {
       "success": false,
-      "short_msg": "\u274c Timeout",
-      "detailed_msg": "File loading exceeded 30 seconds"
+      "short_msg": "\u274c Prolog error",
+      "detailed_msg": "PrologThrow: error(permission_error(modify, static_procedure, /(goal_expansion, 2)), context(consult/1))"
     },
     "library/dcgs.pl": {
       "success": true,
@@ -68,8 +68,8 @@
     },
     "library/debug.pl": {
       "success": false,
-      "short_msg": "\u274c Timeout",
-      "detailed_msg": "File loading exceeded 30 seconds"
+      "short_msg": "\u274c Prolog error",
+      "detailed_msg": "PrologThrow: error(permission_error(modify, static_procedure, /(goal_expansion, 2)), context(consult/1))"
     },
     "library/diag.pl": {
       "success": true,
@@ -88,8 +88,8 @@
     },
     "library/ffi.pl": {
       "success": false,
-      "short_msg": "\u274c Timeout",
-      "detailed_msg": "File loading exceeded 30 seconds"
+      "short_msg": "\u274c Prolog error",
+      "detailed_msg": "PrologThrow: error(permission_error(modify, static_procedure, /(goal_expansion, 2)), context(consult/1))"
     },
     "library/files.pl": {
       "success": true,
@@ -98,8 +98,8 @@
     },
     "library/format.pl": {
       "success": false,
-      "short_msg": "\u274c Timeout",
-      "detailed_msg": "File loading exceeded 30 seconds"
+      "short_msg": "\u274c Prolog error",
+      "detailed_msg": "PrologThrow: error(permission_error(modify, static_procedure, /(goal_expansion, 2)), context(consult/1))"
     },
     "library/freeze.pl": {
       "success": true,
@@ -118,8 +118,8 @@
     },
     "library/http/http_server.pl": {
       "success": false,
-      "short_msg": "\u274c Timeout",
-      "detailed_msg": "File loading exceeded 30 seconds"
+      "short_msg": "\u274c Prolog error",
+      "detailed_msg": "PrologThrow: error(permission_error(modify, static_procedure, /(goal_expansion, 2)), context(consult/1))"
     },
     "library/iso_ext.pl": {
       "success": true,
@@ -143,18 +143,18 @@
     },
     "library/numerics/quadtests.pl": {
       "success": false,
-      "short_msg": "\u274c Timeout",
-      "detailed_msg": "File loading exceeded 30 seconds"
+      "short_msg": "\u274c Prolog error",
+      "detailed_msg": "PrologThrow: error(permission_error(modify, static_procedure, /(goal_expansion, 2)), context(consult/1))"
     },
     "library/numerics/special_functions.pl": {
       "success": false,
       "short_msg": "\u274c Prolog error",
-      "detailed_msg": "PrologThrow: error(syntax_error(No terminal matches 'P' in the current parser context, at line 10 col 22\n\n              ,gamma_P_Q/4\n                     ^\nExpected one of: \n\t* INFIX_XFY_1105_49\n\t* INFIX_XFY_1000_46\n\t* INFIX_XFX_700_27\n\t* INFIX_XFX_700_31\n\t* INFIX_YFX_400_13\n\t* _RBRA\n\t* INFIX_YFX_500_15\n\t* INFIX_XFX_700_20\n\t* INFIX_XFX_700_39\n\t* INFIX_YFX_400_12\n\t* INFIX_XFX_700_30\n\t* INFIX_XFX_700_34\n\t* INFIX_XFX_700_23\n\t* INFIX_XFX_700_32\n\t* INFIX_XFX_700_33\n\t* INFIX_XFX_700_25\n\t* INFIX_XFX_700_42\n\t* INFIX_YFX_400_9\n\t* INFIX_XFX_700_21\n\t* INFIX_XFX_700_22\n\t* INFIX_XFX_700_26\n\t* INFIX_XFY_200_1\n\t* INFIX_XFX_1200_51\n\t* INFIX_XFX_700_35\n\t* INFIX_YFX_400_11\n\t* INFIX_XFX_700_43\n\t* INFIX_YFX_400_6\n\t* INFIX_XFX_700_36\n\t* INFIX_XFY_1100_48\n\t* INFIX_XFX_1200_52\n\t* INFIX_XFX_700_38\n\t* INFIX_XFX_700_24\n\t* INFIX_XFY_200_2\n\t* INFIX_XFY_600_19\n\t* INFIX_YFX_500_17\n\t* INFIX_XFX_700_37\n\t* INFIX_XFX_700_28\n\t* INFIX_YFX_400_8\n\t* _LPAR\n\t* INFIX_YFX_400_10\n\t* INFIX_YFX_500_18\n\t* INFIX_XFX_700_40\n\t* INFIX_YFX_400_7\n\t* INFIX_YFX_400_5\n\t* INFIX_YFX_500_16\n\t* INFIX_XFX_700_41\n\t* INFIX_XFX_450_14\n\t* INFIX_XFY_1050_47\n\t* INFIX_XFX_700_29\n), context(consult/1))"
+      "detailed_msg": "PrologThrow: error(syntax_error(No terminal matches 'P' in the current parser context, at line 10 col 22\n\n              ,gamma_P_Q/4\n                     ^\nExpected one of: \n\t* INFIX_YFX_400_12\n\t* INFIX_XFX_700_30\n\t* INFIX_XFY_200_2\n\t* INFIX_XFX_700_34\n\t* INFIX_YFX_400_11\n\t* INFIX_XFX_700_29\n\t* INFIX_XFY_1100_48\n\t* INFIX_XFX_700_22\n\t* INFIX_XFX_700_42\n\t* INFIX_XFX_700_26\n\t* INFIX_YFX_500_18\n\t* INFIX_XFX_1200_51\n\t* INFIX_XFX_700_31\n\t* INFIX_XFX_700_24\n\t* INFIX_XFX_700_37\n\t* INFIX_XFY_1105_49\n\t* INFIX_XFX_700_40\n\t* INFIX_XFX_700_25\n\t* INFIX_XFX_700_36\n\t* INFIX_YFX_500_15\n\t* INFIX_YFX_400_7\n\t* INFIX_YFX_400_13\n\t* INFIX_XFX_700_27\n\t* _RBRA\n\t* _LPAR\n\t* INFIX_XFX_450_14\n\t* INFIX_YFX_400_10\n\t* INFIX_XFX_700_33\n\t* INFIX_YFX_400_8\n\t* INFIX_XFX_700_39\n\t* INFIX_XFX_700_38\n\t* INFIX_XFY_1050_47\n\t* INFIX_XFX_700_32\n\t* INFIX_YFX_500_17\n\t* INFIX_XFX_700_43\n\t* INFIX_YFX_400_6\n\t* INFIX_XFX_700_21\n\t* INFIX_YFX_500_16\n\t* INFIX_XFY_200_1\n\t* INFIX_XFX_700_23\n\t* INFIX_YFX_400_9\n\t* INFIX_XFX_700_41\n\t* INFIX_XFX_700_35\n\t* INFIX_YFX_400_5\n\t* INFIX_XFY_600_19\n\t* INFIX_XFX_700_28\n\t* INFIX_XFX_1200_52\n\t* INFIX_XFX_700_20\n\t* INFIX_XFY_1000_46\n), context(consult/1))"
     },
     "library/numerics/testutils.pl": {
       "success": false,
-      "short_msg": "\u274c Timeout",
-      "detailed_msg": "File loading exceeded 30 seconds"
+      "short_msg": "\u274c Prolog error",
+      "detailed_msg": "PrologThrow: error(permission_error(modify, static_procedure, /(goal_expansion, 2)), context(consult/1))"
     },
     "library/ops_and_meta_predicates.pl": {
       "success": false,
@@ -164,7 +164,7 @@
     "library/ordsets.pl": {
       "success": false,
       "short_msg": "\u274c Prolog error",
-      "detailed_msg": "PrologThrow: error(syntax_error(No terminal matches 'R' in the current parser context, at line 22 col 13\n\n        ;/* R2 = (=),   Item == X2 */ true\n            ^\nExpected one of: \n\t* INFIX_XFY_1000_46\n\t* INFIX_XFX_700_27\n\t* INFIX_XFX_700_31\n\t* INFIX_XFX_1200_50\n\t* INFIX_YFX_400_13\n\t* INFIX_YFX_500_15\n\t* INFIX_XFX_700_20\n\t* INFIX_XFX_700_39\n\t* INFIX_YFX_400_12\n\t* INFIX_XFX_700_30\n\t* INFIX_XFX_700_34\n\t* INFIX_XFX_700_23\n\t* INFIX_XFX_700_32\n\t* INFIX_XFX_700_33\n\t* INFIX_XFX_700_25\n\t* INFIX_XFX_700_42\n\t* INFIX_YFX_400_9\n\t* INFIX_XFX_700_21\n\t* INFIX_XFX_700_22\n\t* INFIX_XFX_700_26\n\t* INFIX_XFY_200_1\n\t* INFIX_XFX_1200_51\n\t* INFIX_XFX_700_35\n\t* INFIX_YFX_400_11\n\t* INFIX_XFX_700_43\n\t* INFIX_YFX_400_6\n\t* INFIX_XFX_700_36\n\t* INFIX_XFY_1100_48\n\t* INFIX_XFX_700_38\n\t* INFIX_XFX_700_24\n\t* INFIX_XFY_200_2\n\t* INFIX_XFY_600_19\n\t* INFIX_YFX_500_17\n\t* INFIX_XFX_700_37\n\t* INFIX_XFX_700_28\n\t* INFIX_YFX_400_8\n\t* _LPAR\n\t* INFIX_YFX_400_10\n\t* INFIX_YFX_500_18\n\t* INFIX_XFX_700_40\n\t* INFIX_YFX_400_7\n\t* INFIX_YFX_400_5\n\t* INFIX_YFX_500_16\n\t* INFIX_XFX_700_41\n\t* INFIX_XFX_450_14\n\t* INFIX_XFY_1050_47\n\t* INFIX_XFX_700_29\n\t* _RPAR\n), context(consult/1))"
+      "detailed_msg": "PrologThrow: error(syntax_error(No terminal matches 'R' in the current parser context, at line 22 col 13\n\n        ;/* R2 = (=),   Item == X2 */ true\n            ^\nExpected one of: \n\t* INFIX_YFX_400_12\n\t* INFIX_XFX_700_30\n\t* INFIX_XFY_200_2\n\t* INFIX_XFX_700_34\n\t* INFIX_YFX_400_11\n\t* _RPAR\n\t* INFIX_XFX_700_29\n\t* INFIX_XFY_1100_48\n\t* INFIX_XFX_700_22\n\t* INFIX_XFX_700_42\n\t* INFIX_XFX_700_26\n\t* INFIX_YFX_500_18\n\t* INFIX_XFX_1200_51\n\t* INFIX_XFX_700_31\n\t* INFIX_XFX_700_24\n\t* INFIX_XFX_700_37\n\t* INFIX_XFX_700_40\n\t* INFIX_XFX_700_25\n\t* INFIX_XFX_700_36\n\t* INFIX_YFX_500_15\n\t* INFIX_YFX_400_7\n\t* INFIX_YFX_400_13\n\t* INFIX_XFX_700_27\n\t* _LPAR\n\t* INFIX_XFX_450_14\n\t* INFIX_YFX_400_10\n\t* INFIX_XFX_700_33\n\t* INFIX_YFX_400_8\n\t* INFIX_XFX_700_39\n\t* INFIX_XFX_700_38\n\t* INFIX_XFY_1050_47\n\t* INFIX_XFX_700_32\n\t* INFIX_YFX_500_17\n\t* INFIX_XFX_700_43\n\t* INFIX_XFX_1200_50\n\t* INFIX_YFX_400_6\n\t* INFIX_XFX_700_21\n\t* INFIX_YFX_500_16\n\t* INFIX_XFY_200_1\n\t* INFIX_XFX_700_23\n\t* INFIX_YFX_400_9\n\t* INFIX_XFX_700_41\n\t* INFIX_XFX_700_35\n\t* INFIX_YFX_400_5\n\t* INFIX_XFY_600_19\n\t* INFIX_XFX_700_28\n\t* INFIX_XFX_700_20\n\t* INFIX_XFY_1000_46\n), context(consult/1))"
     },
     "library/os.pl": {
       "success": true,
@@ -223,8 +223,8 @@
     },
     "library/simplex.pl": {
       "success": false,
-      "short_msg": "\u274c Timeout",
-      "detailed_msg": "File loading exceeded 30 seconds"
+      "short_msg": "\u274c Prolog error",
+      "detailed_msg": "PrologThrow: error(permission_error(modify, static_procedure, /(goal_expansion, 2)), context(consult/1))"
     },
     "library/sockets.pl": {
       "success": true,
@@ -248,18 +248,18 @@
     },
     "library/tabling/table_data_structure.pl": {
       "success": false,
-      "short_msg": "\u274c Timeout",
-      "detailed_msg": "File loading exceeded 30 seconds"
+      "short_msg": "\u274c Prolog error",
+      "detailed_msg": "PrologThrow: error(permission_error(modify, static_procedure, /(goal_expansion, 2)), context(consult/1))"
     },
     "library/tabling/table_link_manager.pl": {
       "success": false,
-      "short_msg": "\u274c Timeout",
-      "detailed_msg": "File loading exceeded 30 seconds"
+      "short_msg": "\u274c Prolog error",
+      "detailed_msg": "PrologThrow: error(permission_error(modify, static_procedure, /(goal_expansion, 2)), context(consult/1))"
     },
     "library/tabling/trie.pl": {
       "success": false,
-      "short_msg": "\u274c Timeout",
-      "detailed_msg": "File loading exceeded 30 seconds"
+      "short_msg": "\u274c Prolog error",
+      "detailed_msg": "PrologThrow: error(permission_error(modify, static_procedure, /(goal_expansion, 2)), context(consult/1))"
     },
     "library/tabling/wrapper.pl": {
       "success": true,
@@ -268,8 +268,8 @@
     },
     "library/tabling.pl": {
       "success": false,
-      "short_msg": "\u274c Timeout",
-      "detailed_msg": "File loading exceeded 30 seconds"
+      "short_msg": "\u274c Prolog error",
+      "detailed_msg": "PrologThrow: error(permission_error(modify, static_procedure, /(goal_expansion, 2)), context(consult/1))"
     },
     "library/terms.pl": {
       "success": true,
@@ -283,8 +283,8 @@
     },
     "library/time.pl": {
       "success": false,
-      "short_msg": "\u274c Timeout",
-      "detailed_msg": "File loading exceeded 30 seconds"
+      "short_msg": "\u274c Prolog error",
+      "detailed_msg": "PrologThrow: error(permission_error(modify, static_procedure, /(goal_expansion, 2)), context(consult/1))"
     },
     "library/tls.pl": {
       "success": true,
@@ -294,12 +294,12 @@
     "library/ugraphs.pl": {
       "success": false,
       "short_msg": "\u274c Prolog error",
-      "detailed_msg": "PrologThrow: error(syntax_error(No terminal matches 'R' in the current parser context, at line 22 col 13\n\n        ;/* R2 = (=),   Item == X2 */ true\n            ^\nExpected one of: \n\t* INFIX_XFY_1000_46\n\t* INFIX_XFX_700_27\n\t* INFIX_XFX_700_31\n\t* INFIX_XFX_1200_50\n\t* INFIX_YFX_400_13\n\t* INFIX_YFX_500_15\n\t* INFIX_XFX_700_20\n\t* INFIX_XFX_700_39\n\t* INFIX_YFX_400_12\n\t* INFIX_XFX_700_30\n\t* INFIX_XFX_700_34\n\t* INFIX_XFX_700_23\n\t* INFIX_XFX_700_32\n\t* INFIX_XFX_700_33\n\t* INFIX_XFX_700_25\n\t* INFIX_XFX_700_42\n\t* INFIX_YFX_400_9\n\t* INFIX_XFX_700_21\n\t* INFIX_XFX_700_22\n\t* INFIX_XFX_700_26\n\t* INFIX_XFY_200_1\n\t* INFIX_XFX_1200_51\n\t* INFIX_XFX_700_35\n\t* INFIX_YFX_400_11\n\t* INFIX_XFX_700_43\n\t* INFIX_YFX_400_6\n\t* INFIX_XFX_700_36\n\t* INFIX_XFY_1100_48\n\t* INFIX_XFX_700_38\n\t* INFIX_XFX_700_24\n\t* INFIX_XFY_200_2\n\t* INFIX_XFY_600_19\n\t* INFIX_YFX_500_17\n\t* INFIX_XFX_700_37\n\t* INFIX_XFX_700_28\n\t* INFIX_YFX_400_8\n\t* _LPAR\n\t* INFIX_YFX_400_10\n\t* INFIX_YFX_500_18\n\t* INFIX_XFX_700_40\n\t* INFIX_YFX_400_7\n\t* INFIX_YFX_400_5\n\t* INFIX_YFX_500_16\n\t* INFIX_XFX_700_41\n\t* INFIX_XFX_450_14\n\t* INFIX_XFY_1050_47\n\t* INFIX_XFX_700_29\n\t* _RPAR\n), context(consult/1))"
+      "detailed_msg": "PrologThrow: error(syntax_error(No terminal matches 'R' in the current parser context, at line 22 col 13\n\n        ;/* R2 = (=),   Item == X2 */ true\n            ^\nExpected one of: \n\t* INFIX_YFX_400_12\n\t* INFIX_XFX_700_30\n\t* INFIX_XFY_200_2\n\t* INFIX_XFX_700_34\n\t* INFIX_YFX_400_11\n\t* _RPAR\n\t* INFIX_XFX_700_29\n\t* INFIX_XFY_1100_48\n\t* INFIX_XFX_700_22\n\t* INFIX_XFX_700_42\n\t* INFIX_XFX_700_26\n\t* INFIX_YFX_500_18\n\t* INFIX_XFX_1200_51\n\t* INFIX_XFX_700_31\n\t* INFIX_XFX_700_24\n\t* INFIX_XFX_700_37\n\t* INFIX_XFX_700_40\n\t* INFIX_XFX_700_25\n\t* INFIX_XFX_700_36\n\t* INFIX_YFX_500_15\n\t* INFIX_YFX_400_7\n\t* INFIX_YFX_400_13\n\t* INFIX_XFX_700_27\n\t* _LPAR\n\t* INFIX_XFX_450_14\n\t* INFIX_YFX_400_10\n\t* INFIX_XFX_700_33\n\t* INFIX_YFX_400_8\n\t* INFIX_XFX_700_39\n\t* INFIX_XFX_700_38\n\t* INFIX_XFY_1050_47\n\t* INFIX_XFX_700_32\n\t* INFIX_YFX_500_17\n\t* INFIX_XFX_700_43\n\t* INFIX_XFX_1200_50\n\t* INFIX_YFX_400_6\n\t* INFIX_XFX_700_21\n\t* INFIX_YFX_500_16\n\t* INFIX_XFY_200_1\n\t* INFIX_XFX_700_23\n\t* INFIX_YFX_400_9\n\t* INFIX_XFX_700_41\n\t* INFIX_XFX_700_35\n\t* INFIX_YFX_400_5\n\t* INFIX_XFY_600_19\n\t* INFIX_XFX_700_28\n\t* INFIX_XFX_700_20\n\t* INFIX_XFY_1000_46\n), context(consult/1))"
     },
     "library/uuid.pl": {
       "success": false,
-      "short_msg": "\u274c Timeout",
-      "detailed_msg": "File loading exceeded 30 seconds"
+      "short_msg": "\u274c Prolog error",
+      "detailed_msg": "PrologThrow: error(permission_error(modify, static_procedure, /(goal_expansion, 2)), context(consult/1))"
     },
     "library/wasm.pl": {
       "success": true,
@@ -308,8 +308,8 @@
     },
     "library/when.pl": {
       "success": false,
-      "short_msg": "\u274c Timeout",
-      "detailed_msg": "File loading exceeded 30 seconds"
+      "short_msg": "\u274c Prolog error",
+      "detailed_msg": "PrologThrow: error(permission_error(modify, static_procedure, /(goal_expansion, 2)), context(consult/1))"
     },
     "library/xpath.pl": {
       "success": true,

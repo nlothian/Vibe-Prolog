@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from vibeprolog import PrologInterpreter
+from vibeprolog.interpreter import clear_ast_caches
 
 
 def load_program(prolog: PrologInterpreter, filename: str, verbose: bool = False) -> bool:
@@ -256,9 +257,18 @@ Examples:
              'shadow lets modules override built-ins within their namespace while user scope keeps the built-in'
     )
 
+    parser.add_argument(
+        '--clear-ast-cache',
+        action='store_true',
+        help='Clear cached AST artifacts before running the interpreter'
+    )
+
     args = parser.parse_args()
 
     # Shadow mode is now implemented
+
+    if args.clear_ast_cache:
+        clear_ast_caches()
 
     # Create interpreter
     prolog = PrologInterpreter(argv=args.program_args, builtin_conflict=args.builtin_conflict)

@@ -2,7 +2,9 @@
 
 import copy
 import io
+import pickle
 import re
+import shutil
 import sys
 import warnings
 from pathlib import Path
@@ -62,6 +64,33 @@ class ParsedModuleCacheEntry(TypedDict):
     char_conversions: tuple[tuple[str, str], ...]
     conditional_state: tuple[tuple[bool, bool, bool], ...]
     file_mtime: float | None
+
+
+class SerializedParsedModule(TypedDict):
+    version: int
+    parser_signature: tuple[int, tuple[tuple[str, str], ...], tuple[tuple[bool, bool, bool], ...]]
+    file_mtime: float | None
+    items: list[Clause | Directive]
+
+
+SERIALIZED_PARSED_CACHE_VERSION = 1
+
+
+def clear_ast_caches() -> None:
+    """Clear cached AST artifacts on disk and in process-wide state."""
+
+    _GLOBAL_OPERATOR_CACHE.clear()
+    for root in LIBRARY_SEARCH_PATHS:
+        cache_dir = root / ".vibe_parsed_cache"
+        try:
+            shutil.rmtree(cache_dir)
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            warnings.warn(
+                f"Failed to remove AST cache directory {cache_dir}: {exc}",
+                RuntimeWarning,
+            )
 
 
 class Module:
@@ -912,6 +941,91 @@ class PrologInterpreter:
             return path.stat().st_mtime
         except OSError:
             return None
+
+    def _library_root_for_path(self, path: Path) -> Path | None:
+        """Return the library search root containing ``path`` if any."""
+
+        try:
+            resolved_path = path.resolve()
+        except OSError:
+            return None
+
+        for root in LIBRARY_SEARCH_PATHS:
+            try:
+                resolved_root = root.resolve()
+            except OSError:
+                continue
+            try:
+                resolved_path.relative_to(resolved_root)
+            except ValueError:
+                continue
+            return resolved_root
+        return None
+
+    def _library_cache_path(self, path: Path) -> Path | None:
+        """Return the on-disk cache location for a shipped library file."""
+
+        library_root = self._library_root_for_path(path)
+        if library_root is None:
+            return None
+
+        try:
+            relative_path = path.resolve().relative_to(library_root)
+        except (OSError, ValueError):
+            return None
+
+        cache_dir = library_root / ".vibe_parsed_cache"
+        safe_name = "__".join(relative_path.parts) + ".pickle"
+        return cache_dir / safe_name
+
+    def _load_serialized_parsed_items(
+        self, cache_file: Path, file_mtime: float | None
+    ) -> list[Clause | Directive] | None:
+        """Load cached parsed items from disk if they are still valid."""
+
+        try:
+            with cache_file.open("rb") as handle:
+                payload: SerializedParsedModule = pickle.load(handle)
+        except (OSError, pickle.PickleError):
+            return None
+        except Exception as e:
+            warnings.warn(f"Failed to load parsed module cache from {cache_file}: {e}", RuntimeWarning)
+            return None
+
+        signature = self._parser_config_signature()
+        if (
+            payload.get("version") != SERIALIZED_PARSED_CACHE_VERSION
+            or payload.get("file_mtime") != file_mtime
+            or tuple(payload.get("parser_signature", ())) != signature
+        ):
+            return None
+
+        items = payload.get("items")
+        if not isinstance(items, list):
+            return None
+
+        return copy.deepcopy(items)
+
+    def _store_serialized_parsed_items(
+        self, cache_file: Path, file_mtime: float | None, items: list[Clause | Directive]
+    ) -> None:
+        """Persist parsed items to disk for shipped libraries."""
+
+        payload: SerializedParsedModule = {
+            "version": SERIALIZED_PARSED_CACHE_VERSION,
+            "parser_signature": self._parser_config_signature(),
+            "file_mtime": file_mtime,
+            "items": items,
+        }
+
+        try:
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
+            with cache_file.open("wb") as handle:
+                pickle.dump(payload, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        except OSError:
+            warnings.warn(
+                f"Failed to write parsed module cache to {cache_file}", RuntimeWarning
+            )
 
     def _parser_config_signature(self) -> tuple[
         int, tuple[tuple[str, str], ...], tuple[tuple[bool, bool, bool], ...]
@@ -1892,6 +2006,18 @@ class PrologInterpreter:
             error_term = PrologError.syntax_error(str(exc), "consult/1")
             raise PrologThrow(error_term)
 
+        disk_cache_path = None
+        if cache_path is not None:
+            disk_cache_path = self._library_cache_path(cache_path)
+            if cached_items is None and disk_cache_path is not None:
+                cached_items = self._load_serialized_parsed_items(
+                    disk_cache_path, file_mtime
+                )
+                if cached_items is not None:
+                    self._store_parsed_module_cache(
+                        cache_path, file_mtime, cached_items
+                    )
+
         def _process_parsed_items(
             parsed_items: list[Clause | Directive],
             last_pred: tuple[str, str, int] | None,
@@ -1963,6 +2089,10 @@ class PrologInterpreter:
 
         if cache_path is not None and cached_items is None:
             self._store_parsed_module_cache(cache_path, file_mtime, parsed_items_for_cache)
+            if disk_cache_path is not None:
+                self._store_serialized_parsed_items(
+                    disk_cache_path, file_mtime, parsed_items_for_cache
+                )
 
         self.engine = PrologEngine(
             self.clauses,
