@@ -280,11 +280,11 @@ class TestOperatorTableIntegration:
     def test_query_operator_cannot_be_removed(self):
         """Test that the ?- operator is fundamental and behaves correctly."""
         prolog = PrologInterpreter()
-        
+
         # Attempt to redefine ?- operator (though this is not recommended)
-        # The interpreter should handle this gracefully
-        prolog.consult_string(":- op(1200, fx, '?-').")
-        
+        with pytest.raises(PrologThrow):
+            prolog.consult_string(":- op(1200, fx, '?-').")
+
         # Should still work
         clauses = prolog.parser.parse("?- goal.")
         assert len(clauses) == 1

@@ -120,10 +120,11 @@ PROLOG_GRAMMAR_TEMPLATE = r"""
     _RBRACE: "}"
     _COMMA: ","
     _PIPE: "|"
-    // Priority 36 ensures :- is matched before : (INFIX_OP_FUNCTOR has priority 35)
+    // Priority 36 ensures :- and ?- are matched before : (INFIX_OP_FUNCTOR has priority 35)
     _COLON_DASH.36: ":-"
+    _QUERY_MARKER.36: "?-"
 
-    start: (clause | directive)+
+    start: (clause | directive | query)+
 
     clause: rule | dcg_rule | fact
     fact: term "."
@@ -133,6 +134,7 @@ PROLOG_GRAMMAR_TEMPLATE = r"""
         | atom "(" args ")"
 
     directive: _COLON_DASH (op_directive | prefix_directive | property_directive | term) "."
+    query: _QUERY_MARKER goals "."
 
     prefix_directive: "dynamic" predicate_indicators -> dynamic_directive
         | "multifile" predicate_indicators -> multifile_directive
@@ -426,6 +428,15 @@ class PrologTransformer(Transformer):
         head = items[0]
         body = items[-1]
         return Clause(head=head, body=body, dcg=True, meta=meta)
+
+    @v_args(meta=True)
+    def query(self, meta, items):
+        goals_list = items[0] if items else []
+        goal_term = self._rebuild_comma_chain(goals_list)
+        if goal_term is None:
+            goal_term = Atom("true")
+        head = Compound("?-", (goal_term,))
+        return Clause(head=head, body=None, meta=meta)
 
     def goals(self, items):
         # Flatten any comma compounds in the goal list
@@ -1647,16 +1658,17 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
         lambda: {"prefix": defaultdict(list), "infix": defaultdict(list), "postfix": defaultdict(list)}
     )
 
-    # Operators with special syntactic roles in clause/directive structure.
-    # These are handled by dedicated grammar productions (rule, directive, dcg_rule)
-    # and should not be included as term-level operators.
-    # Note: ?- is NOT excluded because it's used as a prefix operator for queries
-    # and should be parseable within terms.
-    CLAUSE_STRUCTURE_OPS = {":-", "-->"}
+    # Reserved reader syntax: operators with special syntactic roles in clause/directive
+    # structure. These are handled by dedicated grammar productions (rule, directive,
+    # dcg_rule, goals, args) and MUST NOT be included as term-level operators.
+    # - :- and ?- are clause/directive markers (Layer 1)
+    # - --> is the DCG arrow (Layer 1)
+    # - , is structural in goals/args (Layer 1), not parsed via precedence
+    RESERVED_READER_SYNTAX = {":-", "-->", "?-", ","}
 
     for precedence, spec, name in operators:
-        if name in CLAUSE_STRUCTURE_OPS:
-            continue  # Skip - handled by grammar template
+        if name in RESERVED_READER_SYNTAX:
+            continue  # Skip - handled by grammar template (Layer 1)
         if spec in {"fx", "fy"}:
             grouped[precedence]["prefix"][spec].append(name)
         elif spec in {"xf", "yf"}:
@@ -1895,7 +1907,7 @@ class PrologParser:
                 lexer="contextual",
                 propagate_positions=True,
                 maybe_placeholders=False,
-                start=["start", "clause", "directive"],
+                start=["start", "clause", "directive", "query"],
             )
         elif backend == "earley":
             parser = Lark(
@@ -1904,7 +1916,7 @@ class PrologParser:
                 lexer="basic",  # Use basic lexer for proper longest-match tokenization
                 propagate_positions=True,
                 ambiguity="resolve",
-                start=["start", "clause", "directive"],
+                start=["start", "clause", "directive", "query"],
             )
         else:
             raise ValueError(f"Unknown parser backend: {backend}")
@@ -2213,7 +2225,12 @@ class PrologParser:
                     search_pos = stmt_pos + len(statement)
 
                     stripped = statement.lstrip()
-                    start_rule = "directive" if stripped.startswith(":-") else "clause"
+                    if stripped.startswith(":-"):
+                        start_rule = "directive"
+                    elif stripped.startswith("?-"):
+                        start_rule = "query"
+                    else:
+                        start_rule = "clause"
                     try:
                         tree = self.parser.parse(statement, start=start_rule)
                     except LarkError:

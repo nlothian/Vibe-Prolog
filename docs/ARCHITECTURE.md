@@ -84,11 +84,15 @@ results = prolog.query("my_query(X)")
 
 The interpreter consists of four main components:
 
-1. **Parser** (`vibeprolog/parser.py`) - Uses Lark to parse Prolog syntax with full
-    operator precedence, multi-base numeric literals (including base-qualified
-    numbers like `16'ff`), quoted atoms/strings, escapes, and ISO character code
-    forms (except for a handful of noted edge cases). See "Parser Backends" for
-    how the interpreter chooses between the LALR and Earley parsers.
+1. **Parser** (`vibeprolog/parser.py`) - Uses a two-layer reader plus precedence
+   parser built on Lark. The reader stage tokenizes clauses, directives, DCG rules,
+   and top-level queries (`?- goal.`) using reserved grammar that cannot be changed
+   via `op/3`, ensuring constructs such as `Head :- Body.`, `:- directive.`, list
+   delimiters, and commas always parse the same way. The second stage generates a
+   precedence grammar from the active operator table so user-defined operators
+   retain ISO semantics. It supports multi-base numeric literals (including
+   `16'ff`), quoted atoms/strings, escapes, and ISO character codes. See "Parser
+   Backends" and "Reader vs. Operator Layers" for more details.
 2. **Unification** (`vibeprolog/unification.py`) - Robinson-style unification with
    occurs-check by default so cyclic structures are prevented.
 3. **Engine** (`vibeprolog/engine.py`) - Backtracking search with built-in
@@ -260,8 +264,9 @@ These modules are imported by `vibeprolog/engine.py` and have focused coverage i
 
 ## Parser Backends
 
-`vibeprolog/parser.py` builds a Lark grammar from the active operator table, then
-chooses the fastest compatible parser backend:
+`vibeprolog/parser.py` builds a Lark grammar from the active operator table (after
+the reader layer has already tokenized statements), then chooses the fastest
+compatible parser backend:
 
 - **Preferred backend**: The parser defaults to **LALR** for deterministic
   parsing and falls back to **Earley** only when ambiguity or grammar
@@ -287,6 +292,34 @@ chooses the fastest compatible parser backend:
 
 This layering keeps clause parsing fast in the common case while maintaining
 compatibility and error reporting fidelity when Earley is needed.
+
+### Reader vs. Operator Layers
+
+The parser now separates *reserved reader syntax* from *operator-aware parsing*:
+
+1. **Reader layer**
+   - `tokenize_prolog_statements()` walks the raw source while honoring comments,
+     quoted atoms/strings, and ISO `char_conversion/2` rules to split the input
+     into complete statements ending with `.`.
+   - `?:-` constructs, directives, DCG rules, and list/brace/parenthesis delimiters
+     are handled here and cannot be redefined via `op/3`. The operator table also
+     forbids redefining `:-`, `?-`, `-->`, `,`, `{}`, `()`, `[]`, `|`, and `:` so
+     structural syntax always retains ISO behavior.
+   - Each statement is associated with source offsets so PlDoc comments and error
+     reporting remain precise regardless of later transformations.
+
+2. **Operator/precedence layer**
+   - After the reader selects the correct rule (`clause`, `directive`, or `query`),
+     the dynamically generated operator grammar parses the terms using the active
+     operator table supplied by the interpreter or the current module.
+   - Queries are transformed into clauses headed by the functor `?-`, matching ISO
+     semantics while keeping execution unified with directive/rule processing.
+   - Because the structural layer is immutable, user-defined operators can safely
+     mirror Scryer/SWI defaults without risking clause parsing regressions.
+
+Together, these layers emulate Scryer’s “reader + precedence parser” model: the
+reader enforces ISO clause structure and protected syntax, while the generated
+grammar keeps arithmetic and custom operators flexible.
 
 ## DCG (Definite Clause Grammar) Support
 

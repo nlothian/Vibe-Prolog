@@ -29,7 +29,7 @@ Status legend:
 | Directive prefix operator `:-` (1200, fx) | ✅ | **ISO-required** - Prefix form for directives |
 | Custom operator syntax in source | ✅      | Parser dynamically generates grammar for custom operators (infix/prefix/postfix) |
 | Parser/operator grammar cache | ✅📘 | Grammar + Earley parser cached per module/operator set; repeated directives/clauses reuse the cached parser instead of rebuilding the grammar |
-| Query prefix operator `?-` (1200, fx) | ✅ | **ISO-required** - Parsed via operator table |
+| Query prefix operator `?-` (1200, fx) | ✅ | **ISO-required** - Reserved reader syntax; not redefinable via `op/3` |
 | DCG rule operator `-->` (1200, xfx) | ✅    | **ISO-required** - DCG syntax |
 | `:- char_conversion/2`           | ✅      | **ISO-mandatory** - Character conversion during parsing |
 | Dot as clause terminator         | ✅      | Correctly ignores dots inside parentheses/brackets/braces |
