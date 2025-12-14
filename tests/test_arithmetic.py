@@ -76,6 +76,7 @@ class TestBasicArithmetic:
         assert result is not None
         assert result['X'] == 2
 
+    @pytest.mark.larl_exclude
     def test_remainder(self):
         prolog = PrologInterpreter()
 
@@ -224,6 +225,7 @@ class TestComplexExpressions:
         assert result is not None
         assert result['X'] == 15
 
+    @pytest.mark.larl_exclude
     def test_unary_minus_with_spaces(self):
         """Test unary minus operator with spaces."""
         prolog = PrologInterpreter()

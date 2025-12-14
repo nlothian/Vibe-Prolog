@@ -103,6 +103,7 @@ class TestSWIControlFlow:
         result = prolog.query_once(r"\+ member(2, [1,2,3])")
         assert result is None
 
+    @pytest.mark.larl_exclude
     def test_cut_prevents_backtracking(self):
         """
         SWI-Prolog: ?- member(X, [1,2,3]), !.

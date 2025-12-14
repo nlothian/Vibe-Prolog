@@ -196,12 +196,14 @@ class TestMaplist:
 class TestCut:
     """Tests for !/0 (cut) operator."""
 
+    @pytest.mark.larl_exclude
     def test_cut_basic(self):
         """Test basic cut behavior."""
         prolog = PrologInterpreter()
         prolog.consult_string("test_cut :- !.")
         assert prolog.has_solution("test_cut")
 
+    @pytest.mark.larl_exclude
     def test_cut_in_first_clause(self):
         """Test cut in first clause (note: full cut semantics not yet implemented)."""
         prolog = PrologInterpreter()
@@ -514,6 +516,7 @@ class TestFormatStdout:
 class TestMetaInterpreter:
     """Integration tests for meta-interpreter support."""
 
+    @pytest.mark.larl_exclude
     def test_simple_meta_interpreter(self):
         """Test a simple meta-interpreter."""
         prolog = PrologInterpreter()

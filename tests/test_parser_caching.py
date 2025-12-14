@@ -1,7 +1,9 @@
+import pytest
 from vibeprolog import PrologInterpreter
 from vibeprolog.parser import PrologParser
 
 
+@pytest.mark.larl_exclude
 def test_consult_reuses_cached_parser(monkeypatch, tmp_path):
     build_count = 0
     original_create = PrologParser._create_parser

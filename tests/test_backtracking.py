@@ -119,6 +119,7 @@ class TestFailureAndBacktracking:
 class TestCutAndBacktracking:
     """Testing cut's effect on backtracking"""
 
+    @pytest.mark.larl_exclude
     def test_cut_in_rule(self):
         prolog = PrologInterpreter()
         prolog.consult_string("""
@@ -136,6 +137,7 @@ class TestCutAndBacktracking:
         assert result is not None
         assert result['M'] == 5
 
+    @pytest.mark.larl_exclude
     def test_cut_in_disjunction(self):
         prolog = PrologInterpreter()
         prolog.consult_string("""

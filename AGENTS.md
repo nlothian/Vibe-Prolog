@@ -1,7 +1,7 @@
 # Goals
 
 These goals are what we are working towards in this project:
-- A complete, widely compatible Prolog implementation
+- A complete, Scryer Prolog compatible Prolog implementation
 - Robust: It should handle all kinds of error conditions gracefully
 - Fast: It should run prolog programs fast
 - Scalable: It should be able to run large prolog programs
@@ -147,7 +147,7 @@ uv run pytest -s
 
 ## Development Workflow
 
-This is standard ISO prolog implementation. The parser should parse standard prolog syntax.
+This is Prolog implementation. The parser should parse standard prolog syntax. We follow what Scryer prolog does. 
 
 ### Adding a New Built-in
 
@@ -217,11 +217,11 @@ uv run python tools/check_operators.py library/clpb.pl
 - Before implementing support for a new library
 - To prioritize which operators to implement
 - To understand operator dependencies
-- To verify ISO compliance
+- To verify compliance
 
 **Exit codes:**
-- 0: All ISO operators are supported
-- 1: Some ISO operators are missing
+- 0: All operators are supported
+- 1: Some operators are missing
 
 ### Find Built-ins (`tools/find_builtins.py`)
 
@@ -271,16 +271,17 @@ uv run python tools/conformity_test.py --verbose
 ```
 
 **When to use:**
-- Before major releases to verify ISO compliance
+- Before major releases to verify compliance
 - After parser/syntax changes to catch regressions
-- When investigating ISO compatibility issues
+- When investigating compatibility issues
 - To track conformity improvements over time
 
 **Output:** Generates `docs/CONFORMITY_TESTING.md` with detailed results.
 
 ## Resources
 
-- [SWI-Prolog Documentation](https://www.swi-prolog.org/pldoc/man?section=builtin) - Reference for built-in predicates
+- ./docs/ISO_PROLOG_OPERATOR_SET.md
+- ./docs/SCRYER_PROLOG_OPERATORS_SET.md
 - [pytest Documentation](https://docs.pytest.org/) - Testing framework
 - [Lark Parser](https://lark-parser.readthedocs.io/) - Parser generator used for Prolog syntax
 

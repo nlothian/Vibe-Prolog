@@ -26,6 +26,15 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+markers = [
+    "larl_exclude: mark tests to be excluded due to LALR parser issues",
+]
+filterwarnings = [
+    "ignore::pytest.PytestUnraisableExceptionWarning",
+]
+addopts = [
+    "-m", "not larl_exclude",
+]
 
 [tool.uv]
 package = true

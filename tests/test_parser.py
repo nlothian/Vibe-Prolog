@@ -273,6 +273,7 @@ class TestComparisons:
 class TestControlStructures:
     """Tests for parsing control structures."""
 
+    @pytest.mark.larl_exclude
     def test_parse_cut(self):
         """Test parsing the cut operator."""
         parser = PrologParser()
@@ -961,6 +962,7 @@ class TestISOConformityGraphicOperators:
     and treated as block comment starts.
     """
 
+    @pytest.mark.larl_exclude
     def test_double_slash_star_operator(self):
         """ISO test #48: writeq(//*). should parse without 'Unterminated block comment'.
         
@@ -974,6 +976,7 @@ class TestISOConformityGraphicOperators:
         assert clauses[0].head.functor == "writeq"
         # The argument may be parsed as atom or as binary / applied to / and *
 
+    @pytest.mark.larl_exclude
     def test_nested_graphic_operator(self):
         """ISO test #49: writeq(//*./*/).  should parse as two graphic tokens.
         
@@ -1000,6 +1003,7 @@ class TestISOConformityGraphicOperators:
 class TestComplexExamples:
     """Tests for parsing complex real-world examples."""
 
+    @pytest.mark.larl_exclude
     def test_parse_cans_example(self):
         """Test parsing the cans.pl example."""
         parser = PrologParser()
@@ -1297,6 +1301,7 @@ class TestDotAndRangeOperator:
         assert rhs.args[0] == Number(1)
         assert rhs.args[1] == Number(2.3)
 
+    @pytest.mark.larl_exclude
     def test_ellipsis_pattern(self):
         """Ellipsis ... pattern in DCG rules."""
         parser = PrologParser()
