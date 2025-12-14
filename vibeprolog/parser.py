@@ -120,18 +120,19 @@ PROLOG_GRAMMAR_TEMPLATE = r"""
     _RBRACE: "}"
     _COMMA: ","
     _PIPE: "|"
-    _COLON_DASH: ":-"
+    // Priority 36 ensures :- is matched before : (INFIX_OP_FUNCTOR has priority 35)
+    _COLON_DASH.36: ":-"
 
     start: (clause | directive)+
 
     clause: rule | dcg_rule | fact
     fact: term "."
-    rule: term ":-" goals "."
+    rule: term _COLON_DASH goals "."
     dcg_rule: term DCG_ARROW goals "."
     atom_or_compound: atom
         | atom "(" args ")"
 
-    directive: ":-" (op_directive | prefix_directive | property_directive | term) "."
+    directive: _COLON_DASH (op_directive | prefix_directive | property_directive | term) "."
 
     prefix_directive: "dynamic" predicate_indicators -> dynamic_directive
         | "multifile" predicate_indicators -> multifile_directive
@@ -153,6 +154,8 @@ PROLOG_GRAMMAR_TEMPLATE = r"""
     // Priority set to ensure special atoms like -$ are recognized, but still below SPECIAL_ATOM_OPS
     // NOTE: .. (range operator) must have HIGH priority to prevent being split into . . by lexer
     RANGE_OP.30: /\.\./
+    // Single dot as atom (for patterns like upto_what(Bs0, .)) - must outprioritize OP_SYMBOL_DIRECTIVE
+    DOT_ATOM.26: /\.(?=[,\)\]\s])/
     OP_SYMBOL_DIRECTIVE.25: /[+\-*\/<>=\\@#$&!~:?^.]+/
     OP_SYMBOL: /[+\-*\/<>=\\@#$&!~:?^.]+/
 
@@ -182,24 +185,29 @@ __OPERATOR_GRAMMAR__
     // Allow operator symbols as functors: ;(a,b), |(a,b), ,(a,b), ->(a,b), etc.
     operator_compound: operator_functor "(" args ")" -> operator_compound
     // Operators that can be used as functors when followed by (
-    operator_functor: INFIX_OP_FUNCTOR
-    // Infix operators like ;, |, ,, ->, etc.
-    INFIX_OP_FUNCTOR.30: /;/ | /\|/ | /,/ | /->/ | /:/ | /=/ 
-    // Control operators
-    CONTROL_OP_FUNCTOR.30: /\\+/
-    // Comparison operators - but not < and > alone as they're in OP_SYMBOL
-    COMPARISON_OP_FUNCTOR.30: /=:=/ | /=\\=/ | /=</ | />=/ | /=@=/ | /\\=@=/ | /==/ | /\\==/
-    // Arithmetic operators that can also be prefix/postfix - must be followed by ( for functor use
-    ARITH_OP_FUNCTOR.30: /\+/ | /-/ | /\*/ | /\//
+    operator_functor: INFIX_OP_FUNCTOR | ARITH_OP_FUNCTOR | COMPARISON_OP_FUNCTOR | OP_SYMBOL
+    // Infix operators like ;, |, ,, ->, etc. - only match when followed by (
+    // Higher priority (36) ensures these match when followed by (
+    INFIX_OP_FUNCTOR.36: /;(?=\()/ | /\|(?=\()/ | /,(?=\()/ | /->(?=\()/ | /:(?=\()/ | /=(?=\()/ | /<(?=\()/ | />(?=\()/
+    // Control operators - only match when followed by (
+    CONTROL_OP_FUNCTOR.36: /\\+(?=\()/
+    // Comparison operators with lookahead - only match when followed by (
+    COMPARISON_OP_FUNCTOR.36: /=:=(?=\()/ | /=\\=(?=\()/ | /=<(?=\()/ | />=(?=\()/ | /=@=(?=\()/ | /\\=@=(?=\()/ | /==(?=\()/ | /\\==(?=\()/
+    // Arithmetic operators - only match when followed by (
+    // This allows +(a,b) to be parsed as operator_compound instead of prefix operator
+    ARITH_OP_FUNCTOR.36: /\+(?=\()/ | /-(?=\()/ | /\*(?=\()/ | /\/(?=\()/
     // Parenthesized operator as atom: (;), (|), (,), (->), etc.
-    operator_as_atom: INFIX_OP_FUNCTOR
+    // Lower priority (34) so functor patterns match first when followed by (
+    INFIX_OP_ATOM.34: /;/ | /\|/ | /,/ | /->/ | /:/ | /=/ | /\+/ | /-/ | /\*/ | /\// | /</ | />/ | /=:=/ | /=\\=/ | /=</ | />=/ | /=@=/ | /\\=@=/ | /==/ | /\\==/
+    operator_as_atom: INFIX_OP_ATOM
     operator_atom: OPERATOR_ATOM | operator_table_token
-    args: term ("," term)*
+    // args uses 'arg' (not 'term') so comma is treated as separator, not operator
+    args: arg ("," arg)*
 
     curly_braces: "{" term "}"
 
-    DCG_ARROW.35: "-->"
-    OPERATOR_ATOM.35: ":-"
+    DCG_ARROW.36: "-->"
+    OPERATOR_ATOM.36: ":-"
 
     list: "[" "]"                          -> empty_list
         | "[" list_items "]"               -> list_items_only
@@ -208,7 +216,7 @@ __OPERATOR_GRAMMAR__
     list_items: term ("," term)*
 
     string: STRING
-    atom: ATOM | SPECIAL_ATOM | SPECIAL_ATOM_OPS | OP_SYMBOL | COMPARISON_OP_FUNCTOR | CONTROL_OP_FUNCTOR | ARITH_OP_FUNCTOR
+    atom: ATOM | SPECIAL_ATOM | SPECIAL_ATOM_OPS | OP_SYMBOL | DOT_ATOM
     variable: VARIABLE
     char_code: CHAR_CODE
     number: NUMBER
@@ -1528,7 +1536,21 @@ def _is_alphabetic_operator(name: str) -> bool:
     return name.isalpha() or (name.replace("_", "").isalnum() and name[0].isalpha())
 
 
-def _format_operator_literals(ops: Iterable[str]) -> str:
+def _format_operator_literals(
+    ops: Iterable[str], *, exclude_before_paren: bool = False, is_infix: bool = False
+) -> str:
+    """Format operator literals for Lark grammar.
+
+    Args:
+        ops: Operator names to format
+        exclude_before_paren: If True, use negative lookahead to prevent matching
+            when the operator is immediately followed by '('. This is used for
+            prefix operators so that `+(a, b)` is parsed as operator_compound,
+            not as prefix + applied to parenthesized (a, b).
+        is_infix: If True, apply special handling for infix operators that could
+            be prefixes of multi-character operators (e.g., ':' shouldn't match
+            when followed by '-' to form ':-').
+    """
     # Sort longest operators first so sequences like "\\+" take precedence over
     # shorter prefixes such as "\\".
     formatted: list[str] = []
@@ -1537,6 +1559,16 @@ def _format_operator_literals(ops: Iterable[str]) -> str:
             # Alphabetic operators need word boundaries to prevent matching
             # inside atoms like 'indexed' matching 'in' + 'dexed'
             formatted.append(f'/(?<![a-zA-Z0-9_]){escape_for_lark(op)}(?![a-zA-Z0-9_])/')
+        elif exclude_before_paren:
+            # Use negative lookahead to prevent matching when followed by '('
+            # This allows operator_compound to match instead
+            formatted.append(f'/{re.escape(op)}(?!\\()/')
+        elif is_infix and op == ":":
+            # Special case: ':' should not match when followed by '-' (forming ':-')
+            formatted.append(r'/:(?!-)/')
+        elif is_infix and op == "-":
+            # Special case: '-' should not match when followed by '-' or '>' (forming '--' or '->')
+            formatted.append(r'/-(?![->\(])/')
         else:
             formatted.append(f'"{escape_for_lark(op)}"')
     return " | ".join(formatted)
@@ -1556,7 +1588,8 @@ def _operator_token_priority(name: str) -> int:
     """
 
     if any(ch.isalnum() or ch == "_" for ch in name):
-        return 0
+        # Alphabetic operators need priority > ATOM.3 to be matched before ATOM
+        return 4
 
     if len(name) == 1:
         # Single-character graphic operators (like '-') must outrank the
@@ -1565,7 +1598,9 @@ def _operator_token_priority(name: str) -> int:
         return 31
 
     if name in {":-", "-->", "?-"}:
-        return 0
+        # These special operators must outrank their single-character prefixes
+        # (: and -) which have priority 31. Use standard length-based formula.
+        return 30 + len(name)
 
     # Punctuation-only operators should outrank OP_SYMBOL (priority 25) and use
     # longest match to beat their own prefixes.
@@ -1612,7 +1647,16 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
         lambda: {"prefix": defaultdict(list), "infix": defaultdict(list), "postfix": defaultdict(list)}
     )
 
+    # Operators with special syntactic roles in clause/directive structure.
+    # These are handled by dedicated grammar productions (rule, directive, dcg_rule)
+    # and should not be included as term-level operators.
+    # Note: ?- is NOT excluded because it's used as a prefix operator for queries
+    # and should be parseable within terms.
+    CLAUSE_STRUCTURE_OPS = {":-", "-->"}
+
     for precedence, spec, name in operators:
+        if name in CLAUSE_STRUCTURE_OPS:
+            continue  # Skip - handled by grammar template
         if spec in {"fx", "fy"}:
             grouped[precedence]["prefix"][spec].append(name)
         elif spec in {"xf", "yf"}:
@@ -1642,7 +1686,9 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
                 token = f"PREFIX_FX_{precedence}_{token_counter}"
                 priority = _operator_token_priority(name) + 1
                 token_def = f"{token}.{priority}" if priority else token
-                tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                # Use negative lookahead: prefix operators don't match when followed by (
+                # This allows operator_compound to match +(a, b) as functor call
+                tokens.append(f"    {token_def}: {_format_operator_literals([name], exclude_before_paren=True)}")
                 operator_token_names.append(token)
                 parts.append(f"{token} {lower_rule} -> prefix_fx")
         if prefix_specs.get("fy"):
@@ -1651,7 +1697,9 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
                 token = f"PREFIX_FY_{precedence}_{token_counter}"
                 priority = _operator_token_priority(name) + 1
                 token_def = f"{token}.{priority}" if priority else token
-                tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                # Use negative lookahead: prefix operators don't match when followed by (
+                # This allows operator_compound to match +(a, b) as functor call
+                tokens.append(f"    {token_def}: {_format_operator_literals([name], exclude_before_paren=True)}")
                 operator_token_names.append(token)
                 parts.append(f"{token} {rule_name} -> prefix_fy")
 
@@ -1661,7 +1709,8 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
                 token = f"INFIX_XFX_{precedence}_{token_counter}"
                 priority = _operator_token_priority(name)
                 token_def = f"{token}.{priority}" if priority else token
-                tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                # Use is_infix=True to apply special handling for operators like ':'
+                tokens.append(f"    {token_def}: {_format_operator_literals([name], is_infix=True)}")
                 operator_token_names.append(token)
                 parts.append(f"{lower_rule} {token} {lower_rule} -> infix_xfx")
         if infix_specs.get("yfx"):
@@ -1670,7 +1719,8 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
                 token = f"INFIX_YFX_{precedence}_{token_counter}"
                 priority = _operator_token_priority(name)
                 token_def = f"{token}.{priority}" if priority else token
-                tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                # Use is_infix=True to apply special handling for operators like '-'
+                tokens.append(f"    {token_def}: {_format_operator_literals([name], is_infix=True)}")
                 operator_token_names.append(token)
                 parts.append(f"{rule_name} {token} {lower_rule} -> infix_yfx")
         if infix_specs.get("xfy"):
@@ -1679,7 +1729,8 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
                 token = f"INFIX_XFY_{precedence}_{token_counter}"
                 priority = _operator_token_priority(name)
                 token_def = f"{token}.{priority}" if priority else token
-                tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                # Use is_infix=True to apply special handling for operators like ':'
+                tokens.append(f"    {token_def}: {_format_operator_literals([name], is_infix=True)}")
                 operator_token_names.append(token)
                 parts.append(f"{lower_rule} {token} {rule_name} -> infix_xfy")
         if infix_specs.get("yfy"):
@@ -1688,7 +1739,8 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
                 token = f"INFIX_YFY_{precedence}_{token_counter}"
                 priority = _operator_token_priority(name)
                 token_def = f"{token}.{priority}" if priority else token
-                tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                # Use is_infix=True to apply special handling for operators like ':'
+                tokens.append(f"    {token_def}: {_format_operator_literals([name], is_infix=True)}")
                 operator_token_names.append(token)
                 parts.append(f"{rule_name} {token} {rule_name} -> infix_yfy")
 
@@ -1716,6 +1768,17 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
         lower_rule = rule_name
 
     rules.append(f"?term: {lower_rule}")
+
+    # Find the highest level below comma (precedence 1000) for argument parsing.
+    # Inside function arguments, comma is an argument separator, not the comma operator.
+    # So args should parse terms that exclude the comma operator.
+    arg_level = max((p for p in precedence_levels if p < 1000), default=None)
+    if arg_level is not None:
+        rules.append(f"?arg: level_{arg_level}")
+    else:
+        # No operators below comma, use primary
+        rules.append("?arg: primary")
+
     if operator_token_names:
         token_union = " | ".join(operator_token_names)
     else:
@@ -1838,6 +1901,7 @@ class PrologParser:
             parser = Lark(
                 grammar,
                 parser="earley",
+                lexer="basic",  # Use basic lexer for proper longest-match tokenization
                 propagate_positions=True,
                 ambiguity="resolve",
                 start=["start", "clause", "directive"],
@@ -1867,9 +1931,10 @@ class PrologParser:
         if backend != "lalr":
             return grammar
 
+        # For LALR, remove OP_SYMBOL from atom but keep DOT_ATOM for single dot atoms
         return grammar.replace(
-            "atom: ATOM | SPECIAL_ATOM | SPECIAL_ATOM_OPS | OP_SYMBOL",
-            "atom: ATOM | SPECIAL_ATOM",
+            "atom: ATOM | SPECIAL_ATOM | SPECIAL_ATOM_OPS | OP_SYMBOL | DOT_ATOM",
+            "atom: ATOM | SPECIAL_ATOM | DOT_ATOM",
         )
 
     def _parser_cache_key(

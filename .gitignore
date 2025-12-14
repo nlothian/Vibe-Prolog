@@ -29,3 +29,4 @@ website/.astro/
 
 
 .env
+*/**/.vibe_parsed_cache/**
