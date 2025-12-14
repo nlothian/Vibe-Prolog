@@ -87,7 +87,8 @@ The interpreter consists of four main components:
 1. **Parser** (`vibeprolog/parser.py`) - Uses Lark to parse Prolog syntax with full
     operator precedence, multi-base numeric literals (including base-qualified
     numbers like `16'ff`), quoted atoms/strings, escapes, and ISO character code
-    forms (except for a handful of noted edge cases).
+    forms (except for a handful of noted edge cases). See "Parser Backends" for
+    how the interpreter chooses between the LALR and Earley parsers.
 2. **Unification** (`vibeprolog/unification.py`) - Robinson-style unification with
    occurs-check by default so cyclic structures are prevented.
 3. **Engine** (`vibeprolog/engine.py`) - Backtracking search with built-in
@@ -256,6 +257,36 @@ Shared helpers for the AST live in `vibeprolog/utils/`:
 
 These modules are imported by `vibeprolog/engine.py` and have focused coverage in
 `tests/utils/`.
+
+## Parser Backends
+
+`vibeprolog/parser.py` builds a Lark grammar from the active operator table, then
+chooses the fastest compatible parser backend:
+
+- **Preferred backend**: The parser defaults to **LALR** for deterministic
+  parsing and falls back to **Earley** only when ambiguity or grammar
+  constraints require it. Users can also pin the backend to `"lalr"`,
+  `"earley"`, or `"auto"` via `PrologParser(parser_backend=...)`.
+- **Fallback at parse time**: Clause/directive parsing and term parsing call a
+  shared `_with_fallback` helper. If a LALR parse raises a token/character
+  error, the helper automatically retries the same input with the Earley
+  backend while preserving metadata (source positions, PlDoc associations, and
+  numeric folding).
+- **Backend-specific grammar prep**: `_prepare_grammar_for_backend` rewrites the
+  base grammar as needed so Earley keeps explicit `LEFT`/`RIGHT` precedence
+  hints while LALR uses inline priority declarations. Operator-like tokens that
+  are generated dynamically (e.g., graphic operator atoms) are injected into
+  the token set so LALR keeps the fast path for those atoms.
+- **Caching**: Parsers are cached per `(module, operator signature, backend)`
+  tuple. `_parser_cache_key` folds the operator table into the cache key, so the
+  correct parser (and backend) is reused across consults and terms until the
+  operator environment changes.
+- **DCG handling**: DCG rules remain in the grammar so both backends can parse
+  `-->` clauses. The transformer expands DCG bodies after parsing, ensuring the
+  backend choice does not alter the resulting AST.
+
+This layering keeps clause parsing fast in the common case while maintaining
+compatibility and error reporting fidelity when Earley is needed.
 
 ## DCG (Definite Clause Grammar) Support
 

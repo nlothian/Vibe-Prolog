@@ -6,10 +6,10 @@ def test_consult_reuses_cached_parser(monkeypatch, tmp_path):
     build_count = 0
     original_create = PrologParser._create_parser
 
-    def counting_create(self, grammar):
+    def counting_create(self, grammar, *, backend):
         nonlocal build_count
         build_count += 1
-        return original_create(self, grammar)
+        return original_create(self, grammar, backend=backend)
 
     monkeypatch.setattr(PrologParser, "_create_parser", counting_create)
 
@@ -28,10 +28,10 @@ def test_operator_changes_invalidate_parser_cache(monkeypatch, tmp_path):
     build_count = 0
     original_create = PrologParser._create_parser
 
-    def counting_create(self, grammar):
+    def counting_create(self, grammar, *, backend):
         nonlocal build_count
         build_count += 1
-        return original_create(self, grammar)
+        return original_create(self, grammar, backend=backend)
 
     monkeypatch.setattr(PrologParser, "_create_parser", counting_create)
 

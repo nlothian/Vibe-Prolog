@@ -566,10 +566,10 @@ class TestIfThenElseSemantics:
 
 
 class TestNegationAsFailure:
-    """Tests for ISO-compliant negation-as-failure (\+) semantics"""
+    r"""Tests for ISO-compliant negation-as-failure (\+) semantics"""
 
     def test_negation_with_unbound_variable(self):
-        """\+ should not bind variables"""
+        r"""\+ should not bind variables"""
         prolog = PrologInterpreter()
         prolog.consult_string("p(1). p(2).")
         # \+(p(X)) should fail (p(X) has solutions)
@@ -577,14 +577,14 @@ class TestNegationAsFailure:
         assert not prolog.has_solution("\\+(p(X))")
 
     def test_double_negation(self):
-        """\\+(\\+(Goal)) should behave like Goal (classical logic)"""
+        r"""\\+(\\+(Goal)) should behave like Goal (classical logic)"""
         prolog = PrologInterpreter()
         prolog.consult_string("p(a).")
         # But in Prolog, variables don't escape double negation
         assert prolog.has_solution("\\+(\\+(p(a)))")
 
     def test_negation_fails_with_any_solution(self):
-        """\+ fails if goal has even one solution"""
+        r"""\+ fails if goal has even one solution"""
         prolog = PrologInterpreter()
         prolog.consult_string("""
             p(1).
@@ -595,20 +595,20 @@ class TestNegationAsFailure:
         assert not prolog.has_solution("\\+(p(X))")
 
     def test_negation_succeeds_when_goal_fails(self):
-        """\+ succeeds when goal has no solutions"""
+        r"""\+ succeeds when goal has no solutions"""
         prolog = PrologInterpreter()
         assert prolog.has_solution("\\+(fail)")
         assert prolog.has_solution("\\+(1 = 2)")
 
     def test_negation_with_conjunction(self):
-        """\+ should work with conjunctions"""
+        r"""\+ should work with conjunctions"""
         prolog = PrologInterpreter()
         prolog.consult_string("p(1). q(2).")
         # \+(p(X), q(X)) should succeed because no X satisfies both
         assert prolog.has_solution("\\+(p(X), q(X))")
 
     def test_not_aliases(self):
-        """`not/1` and `not_/1` behave like \+/1."""
+        r"""`not/1` and `not_/1` behave like \+/1."""
         prolog = PrologInterpreter()
         prolog.consult_string("p(1).")
         assert prolog.has_solution("not(1 = 2)")
