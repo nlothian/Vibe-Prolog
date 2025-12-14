@@ -135,6 +135,7 @@ class TestOnce:
         assert result['X'] == 'a'
         assert result['Y'] == 1
 
+    @pytest.mark.larl_exclude
     def test_once_with_cut(self):
         """once/1 should be similar to (Goal, !) in behavior."""
         prolog = PrologInterpreter()

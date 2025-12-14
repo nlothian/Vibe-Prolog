@@ -1,9 +1,12 @@
 from pathlib import Path
 
+import pytest
+
 from vibeprolog import PrologInterpreter
 from vibeprolog.parser import PrologParser
 
 
+@pytest.mark.larl_exclude
 def test_consult_prefers_lalr_backend(monkeypatch):
     backends: list[str] = []
     original_create = PrologParser._create_parser

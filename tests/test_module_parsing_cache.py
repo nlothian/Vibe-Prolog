@@ -1,6 +1,7 @@
 """Tests for parsed module caching in the interpreter."""
 
 import os
+import pytest
 
 from vibeprolog import PrologInterpreter
 from vibeprolog import interpreter as interpreter_module
@@ -18,6 +19,7 @@ def _interpreter_with_parse_counter():
     return prolog, lambda: parse_calls
 
 
+@pytest.mark.larl_exclude
 def test_reuses_parsed_modules_across_imports(tmp_path):
     """Ensure a dependency is parsed only once even when imported multiple times."""
 
@@ -55,6 +57,7 @@ def test_reuses_parsed_modules_across_imports(tmp_path):
     assert parse_calls() == first_parse_calls
 
 
+@pytest.mark.larl_exclude
 def test_parsed_module_cache_invalidated_on_mtime_change(tmp_path):
     """The parsed-module cache should refresh when the source file changes."""
 

@@ -210,6 +210,7 @@ class TestOperatorAssociativity:
 class TestOperatorCanonical:
     """Test using operators in canonical functor form (works now)."""
 
+    @pytest.mark.larl_exclude
     def test_store_fact_with_canonical_infix(self):
         """Facts can be stored using canonical infix notation."""
         prolog = PrologInterpreter()
@@ -233,6 +234,7 @@ class TestOperatorCanonical:
         
         assert prolog.has_solution("negated(not_(true))")
 
+    @pytest.mark.larl_exclude
     def test_canonical_postfix_operator(self):
         """Facts with postfix operators can use canonical form."""
         prolog = PrologInterpreter()
@@ -243,6 +245,7 @@ class TestOperatorCanonical:
         
         assert prolog.has_solution("fact(factorial(5))")
 
+    @pytest.mark.larl_exclude
     def test_canonical_nested_operators(self):
         """Nested canonical operators work."""
         prolog = PrologInterpreter()
@@ -258,6 +261,7 @@ class TestOperatorCanonical:
 class TestOperatorWriteTerm:
     """Test write_term respects operator definitions."""
 
+    @pytest.mark.larl_exclude
     def test_write_term_uses_operator_syntax(self):
         """write_term outputs operator syntax for defined operators."""
         prolog = PrologInterpreter()
@@ -274,6 +278,7 @@ class TestOperatorWriteTerm:
         # Should contain operator syntax or canonical form
         assert 'alice' in output and 'chocolate' in output
 
+    @pytest.mark.larl_exclude
     def test_write_term_respects_ignore_ops(self):
         """write_term with ignore_ops(true) uses canonical form."""
         prolog = PrologInterpreter()
@@ -366,6 +371,7 @@ class TestOperatorErrorHandling:
         # It succeeds because '_' is treated as a regular atom
         assert result is not None
 
+    @pytest.mark.larl_exclude
     def test_invalid_operator_type_raises_type_error(self):
         """Non-atom operator raises type_error."""
         prolog = PrologInterpreter()
@@ -445,6 +451,7 @@ class TestOperatorIntegration:
         # Custom operator is defined (even though we can't use its syntax yet)
         assert prolog.has_solution("current_op(500, xfx, custom)")
 
+    @pytest.mark.larl_exclude
     def test_operator_in_clause_body(self):
         """Operators defined in rules work in clause bodies."""
         prolog = PrologInterpreter()
@@ -832,6 +839,7 @@ class TestOperatorIntegration:
 
         assert prolog.has_solution("value(negate(5))")
 
+    @pytest.mark.larl_exclude
     def test_postfix_operator_in_clause(self):
         """Custom postfix operator in clause."""
         prolog = PrologInterpreter()

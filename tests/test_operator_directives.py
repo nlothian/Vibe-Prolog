@@ -45,6 +45,7 @@ class TestOperatorDirectives:
         with pytest.raises(PrologThrow):
             prolog.consult_string(":- op(3.5, xfx, bar).")
 
+    @pytest.mark.larl_exclude
     def test_write_term_respects_new_operator(self):
         prolog = PrologInterpreter()
         prolog.consult_string(

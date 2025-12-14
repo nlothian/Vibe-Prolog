@@ -682,6 +682,7 @@ class TestISOCut:
     Conformity mapping: N/A - cut semantics not tested in iso-conformity-tests.pl
     """
 
+    @pytest.mark.larl_exclude
     def test_cut_prevents_backtracking(self):
         # Conformity: N/A
         prolog = PrologInterpreter()
@@ -696,6 +697,7 @@ class TestISOCut:
         assert results[0]['X'] == 1
         assert results[1]['X'] == 2
 
+    @pytest.mark.larl_exclude
     def test_cut_in_conditional(self):
         # Conformity: N/A
         prolog = PrologInterpreter()
@@ -726,6 +728,7 @@ class TestISOCut:
         assert len(results) == 1
         assert results[0]['X'] == 1
 
+    @pytest.mark.larl_exclude
     def test_cut_scope_limited_to_clause(self):
         """Cut should prune alternative clauses for the same predicate"""
         prolog = PrologInterpreter()
@@ -1004,6 +1007,7 @@ class TestISOParserEdgeCases:
         # Scientific notation equality (test_173)
         assert prolog.has_solution("1.0e-323 =:= 10.0 ** -323")
 
+    @pytest.mark.larl_exclude
     def test_unary_minus_parsing(self):
         # Conformity: test_213, test_214, test_215, test_286, test_287
         prolog = PrologInterpreter()

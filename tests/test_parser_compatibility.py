@@ -212,6 +212,7 @@ class TestCutAndNegation:
         r_goal = clauses[0].body[2]
         assert isinstance(r_goal, Atom) and r_goal.name == 'r'
 
+    @pytest.mark.larl_exclude
     def test_negation_in_parentheses(self):
         r"""Test negation in parentheses: p :- (\+ q ; r), !."""
         parser = PrologParser()

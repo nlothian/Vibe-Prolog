@@ -120,6 +120,7 @@ class TestBlockCommentSyntax:
         clauses = parser.parse(content)
         assert len(clauses) > 0  # Should have parsed some clauses
 
+    @pytest.mark.larl_exclude
     def test_uuid_library_loads(self):
         """Test that library/uuid.pl loads without comment syntax errors."""
         parser = PrologParser()

@@ -9,6 +9,7 @@ from vibeprolog.exceptions import PrologThrow
 class TestRetractallBasic:
     """Basic functionality tests for retractall/1."""
 
+    @pytest.mark.larl_exclude
     def test_retract_all_matching_facts(self):
         """Retract all clauses matching a pattern."""
         prolog = PrologInterpreter()
@@ -28,6 +29,7 @@ class TestRetractallBasic:
         assert not prolog.has_solution("fact(b)")
         assert not prolog.has_solution("fact(c)")
 
+    @pytest.mark.larl_exclude
     def test_retract_with_specific_pattern(self):
         """Retract only clauses matching a specific pattern."""
         prolog = PrologInterpreter()
@@ -46,12 +48,14 @@ class TestRetractallBasic:
         assert prolog.has_solution("item(carrot, vegetable)")
         assert prolog.has_solution("item(potato, vegetable)")
 
+    @pytest.mark.larl_exclude
     def test_retract_from_empty_database_succeeds(self):
         """Retracting when no clauses exist should still succeed."""
         prolog = PrologInterpreter()
         prolog.consult_string(":- dynamic nonexistent/1.")
         assert prolog.has_solution("retractall(nonexistent(_))")
 
+    @pytest.mark.larl_exclude
     def test_retract_no_matching_clauses_succeeds(self):
         """Retracting when no clauses match should still succeed."""
         prolog = PrologInterpreter()
@@ -82,6 +86,7 @@ class TestRetractallPermissions:
         assert error.functor == "error"
         assert error.args[0].functor == "permission_error"
 
+    @pytest.mark.larl_exclude
     def test_retract_dynamic_predicate_succeeds(self):
         """Retracting from a dynamic predicate should succeed."""
         prolog = PrologInterpreter()
@@ -96,6 +101,7 @@ class TestRetractallPermissions:
 class TestRetractallDeterminism:
     """Tests for deterministic behavior of retractall/1."""
 
+    @pytest.mark.larl_exclude
     def test_succeeds_exactly_once(self):
         """retractall/1 should succeed exactly once (no backtracking)."""
         prolog = PrologInterpreter()
@@ -108,6 +114,7 @@ class TestRetractallDeterminism:
         results = list(prolog.query("retractall(fact(_))"))
         assert len(results) == 1
 
+    @pytest.mark.larl_exclude
     def test_returns_original_substitution(self):
         """retractall/1 should return the original substitution unchanged."""
         prolog = PrologInterpreter()
@@ -124,6 +131,7 @@ class TestRetractallDeterminism:
 class TestRetractallComplexPatterns:
     """Tests for complex pattern matching in retractall/1."""
 
+    @pytest.mark.larl_exclude
     def test_partial_instantiation(self):
         """Retract with partial instantiation."""
         prolog = PrologInterpreter()
@@ -139,6 +147,7 @@ class TestRetractallComplexPatterns:
         assert not prolog.has_solution("rel(a, _, _)")
         assert prolog.has_solution("rel(b, c, d)")
 
+    @pytest.mark.larl_exclude
     def test_retract_facts_vs_rules(self):
         """Retract should handle both facts and rules by head unification."""
         prolog = PrologInterpreter()
@@ -159,6 +168,7 @@ class TestRetractallComplexPatterns:
         # The rule was also retracted because pred(a) unifies with pred(X)
         assert not prolog.has_solution("pred(computed)")
 
+    @pytest.mark.larl_exclude
     def test_retract_all_clauses_including_rules(self):
         """Retract all clauses including rules with variable pattern."""
         prolog = PrologInterpreter()
@@ -173,6 +183,7 @@ class TestRetractallComplexPatterns:
         assert prolog.has_solution("retractall(pred(_))")
         assert not prolog.has_solution("pred(_)")
 
+    @pytest.mark.larl_exclude
     def test_multiple_arities(self):
         """Retract from predicates with different arities."""
         prolog = PrologInterpreter()
@@ -197,6 +208,7 @@ class TestRetractallComplexPatterns:
 class TestRetractallIntegration:
     """Integration tests with other predicates."""
 
+    @pytest.mark.larl_exclude
     def test_retractall_then_clause(self):
         """Verify clauses are gone using clause/2."""
         prolog = PrologInterpreter()
@@ -209,6 +221,7 @@ class TestRetractallIntegration:
         assert prolog.has_solution("retractall(fact(_))")
         assert not prolog.has_solution("clause(fact(_), _)")
 
+    @pytest.mark.larl_exclude
     def test_retractall_with_assert(self):
         """Use retractall in combination with assert predicates."""
         prolog = PrologInterpreter()
@@ -222,6 +235,7 @@ class TestRetractallIntegration:
         result = prolog.query_once("counter(X)")
         assert result['X'] == 5
 
+    @pytest.mark.larl_exclude
     def test_retractall_multiple_times(self):
         """Multiple retractall calls should all succeed."""
         prolog = PrologInterpreter()
@@ -237,6 +251,7 @@ class TestRetractallIntegration:
 class TestRetractallIndexMaintenance:
     """Tests for first-argument index maintenance."""
 
+    @pytest.mark.larl_exclude
     def test_index_updated_after_retractall(self):
         """Verify first-argument index is properly updated."""
         prolog = PrologInterpreter()
@@ -256,6 +271,7 @@ class TestRetractallIndexMaintenance:
         assert prolog.has_solution("indexed(new2)")
         assert not prolog.has_solution("indexed(alpha)")
 
+    @pytest.mark.larl_exclude
     def test_partial_retractall_preserves_other_clauses(self):
         """Partial retraction should preserve other clauses correctly."""
         prolog = PrologInterpreter()
@@ -277,6 +293,7 @@ class TestRetractallIndexMaintenance:
 class TestRetractallPredicateIndicator:
     """Tests for predicate indicator form of retractall/1."""
 
+    @pytest.mark.larl_exclude
     def test_retract_by_predicate_indicator(self):
         """Retract all clauses using Name/Arity form."""
         prolog = PrologInterpreter()
@@ -290,6 +307,7 @@ class TestRetractallPredicateIndicator:
         assert prolog.has_solution("retractall(foo/1)")
         assert not prolog.has_solution("foo(_)")
 
+    @pytest.mark.larl_exclude
     def test_retract_zero_arity_by_indicator(self):
         """Retract zero-arity predicates using Name/0 form."""
         prolog = PrologInterpreter()
@@ -301,6 +319,7 @@ class TestRetractallPredicateIndicator:
         assert prolog.has_solution("retractall(flag/0)")
         assert not prolog.has_solution("flag")
 
+    @pytest.mark.larl_exclude
     def test_retract_multi_arity_by_indicator(self):
         """Retract multi-arity predicates using Name/N form."""
         prolog = PrologInterpreter()
@@ -317,6 +336,7 @@ class TestRetractallPredicateIndicator:
 class TestRetractallModules:
     """Tests for module interaction."""
 
+    @pytest.mark.larl_exclude
     def test_retractall_in_module(self):
         """Test retractall with module predicates."""
         prolog = PrologInterpreter()

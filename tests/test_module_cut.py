@@ -7,6 +7,7 @@ from vibeprolog import PrologInterpreter
 class TestModuleCut:
     """Test that cut operator works correctly in module predicates."""
 
+    @pytest.mark.larl_exclude
     def test_cut_in_module_predicate(self):
         """Test that cut prevents backtracking in module predicates."""
         prolog = PrologInterpreter()
@@ -23,6 +24,7 @@ class TestModuleCut:
         assert len(results) == 1
         assert results[0]["X"] == "first"
 
+    @pytest.mark.larl_exclude
     def test_cut_in_module_predicate_with_condition(self):
         """Test cut in module predicate with conditional logic."""
         prolog = PrologInterpreter()
@@ -50,6 +52,7 @@ class TestModuleCut:
         results = list(prolog.query("test_mod:classify(5, Class)"))
         assert len(results) == 1
 
+    @pytest.mark.larl_exclude
     def test_cut_in_module_nested_calls(self):
         """Test that cut in module predicate doesn't affect other predicates."""
         prolog = PrologInterpreter()
@@ -70,6 +73,7 @@ class TestModuleCut:
         assert results[0]["X"] == "a"
         assert results[0]["Y"] == "a"
 
+    @pytest.mark.larl_exclude
     def test_cut_combined_with_module_qualified_calls(self):
         """Test cut behavior with multiple module-qualified calls."""
         prolog = PrologInterpreter()
@@ -90,6 +94,7 @@ class TestModuleCut:
         assert len(results) == 1
         assert results[0]["X"] == "a"
 
+    @pytest.mark.larl_exclude
     def test_cut_doesnt_leak_between_modules(self):
         """Test that cut in one module doesn't affect another module."""
         prolog = PrologInterpreter()

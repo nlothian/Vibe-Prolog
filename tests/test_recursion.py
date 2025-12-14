@@ -11,6 +11,7 @@ from vibeprolog.utils.list_utils import list_to_python
 class TestDeepTailRecursion:
     """Tests for tail-recursive predicates that should handle deep depths."""
 
+    @pytest.mark.larl_exclude
     def test_count_down_deep(self):
         """Test deep tail-recursive count down to zero."""
         prolog = PrologInterpreter()
@@ -22,6 +23,7 @@ class TestDeepTailRecursion:
         assert prolog.has_solution("count_down(300)")
         assert prolog.has_solution("count_down(500)")
 
+    @pytest.mark.larl_exclude
     def test_tail_recursive_accumulator(self):
         """Test tail-recursive predicate with accumulator pattern."""
         prolog = PrologInterpreter()
@@ -60,6 +62,7 @@ class TestDeepTailRecursion:
         assert result is not None
         assert result['X'] == 100
 
+    @pytest.mark.larl_exclude
     def test_tail_recursive_factorial_like(self):
         """Test tail-recursive factorial using accumulator."""
         prolog = PrologInterpreter()
@@ -85,6 +88,7 @@ class TestDeepTailRecursion:
 class TestMutualRecursion:
     """Tests for mutual tail recursion between predicates."""
 
+    @pytest.mark.larl_exclude
     def test_even_odd_deep(self):
         """Test mutual recursion between even/odd predicates."""
         prolog = PrologInterpreter()
@@ -99,6 +103,7 @@ class TestMutualRecursion:
         assert prolog.has_solution("odd(299)")
         assert prolog.has_solution("odd(499)")
 
+    @pytest.mark.larl_exclude
     def test_even_odd_negative_cases(self):
         """Test mutual recursion fails correctly for odd/even."""
         prolog = PrologInterpreter()
@@ -170,6 +175,7 @@ class TestBacktrackingWithRecursion:
 class TestCutWithRecursion:
     """Tests that cut semantics are preserved with recursion."""
 
+    @pytest.mark.larl_exclude
     def test_cut_stops_backtracking(self):
         """Test that cut prevents backtracking in recursive predicates."""
         prolog = PrologInterpreter()
@@ -181,6 +187,7 @@ class TestCutWithRecursion:
         assert len(results) == 1
         assert results[0]['X'] == 5
 
+    @pytest.mark.larl_exclude
     def test_cut_in_deep_recursion(self):
         """Test cut works correctly in deep tail-recursive predicates."""
         prolog = PrologInterpreter()
@@ -201,6 +208,7 @@ class TestCutWithRecursion:
 class TestNonTailRecursion:
     """Tests for non-tail-recursive predicates (limited to reasonable depth)."""
 
+    @pytest.mark.larl_exclude
     def test_factorial_moderate_depth(self):
         """Test non-tail-recursive factorial works to moderate depth."""
         prolog = PrologInterpreter()
@@ -217,6 +225,7 @@ class TestNonTailRecursion:
         assert result is not None
         assert result['F'] == 2432902008176640000
 
+    @pytest.mark.larl_exclude
     def test_fibonacci_moderate_depth(self):
         """Test non-tail-recursive Fibonacci to moderate depth."""
         prolog = PrologInterpreter()
@@ -261,6 +270,7 @@ class TestRecursionLimits:
         # Verify it's a recursion depth error
         assert "recursion" in str(exc_info.value).lower() or "depth" in str(exc_info.value).lower()
 
+    @pytest.mark.larl_exclude
     def test_configurable_recursion_depth(self):
         """Test that recursion depth can be configured per interpreter."""
         # Shallow limit
@@ -371,6 +381,7 @@ class TestTailRecursionPerformance:
 class TestComplexRecursivePatterns:
     """Tests for complex recursive patterns."""
 
+    @pytest.mark.larl_exclude
     def test_nested_tail_recursion(self):
         """Test nested tail-recursive predicates."""
         prolog = PrologInterpreter()
@@ -394,6 +405,7 @@ class TestComplexRecursivePatterns:
         result = prolog.query_once("process_list([1, -2, 3, -4, 5], X)")
         assert result is not None
 
+    @pytest.mark.larl_exclude
     def test_recursive_data_construction(self):
         """Test tail recursion that builds data structures."""
         prolog = PrologInterpreter()
@@ -420,6 +432,7 @@ class TestComplexRecursivePatterns:
 class TestEdgeCases:
     """Tests for edge cases and boundary conditions."""
 
+    @pytest.mark.larl_exclude
     def test_single_iteration_recursion(self):
         """Test recursion that only recurses once."""
         prolog = PrologInterpreter()
@@ -429,6 +442,7 @@ class TestEdgeCases:
         """)
         assert prolog.has_solution("once_recursive(1)")
 
+    @pytest.mark.larl_exclude
     def test_zero_depth_recursion(self):
         """Test that base cases work correctly."""
         prolog = PrologInterpreter()

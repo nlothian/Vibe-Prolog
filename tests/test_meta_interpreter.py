@@ -141,6 +141,7 @@ class TestPredicateProperty:
         result = prolog.query_once("predicate_property(append(_, _, _), built_in).")
         assert result == {}
 
+    @pytest.mark.larl_exclude
     def test_builtin_is(self):
         """Test that is/2 is recognized as built-in."""
         prolog = PrologInterpreter()

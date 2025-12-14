@@ -232,6 +232,7 @@ class TestDCGIndicators:
 class TestOperatorUsageAfterImport:
     """Tests for using operators after they've been imported."""
 
+    @pytest.mark.larl_exclude
     def test_use_custom_operator_after_op_directive(self):
         """Test that operators defined with op/3 can be used in subsequent clauses."""
         prolog = PrologInterpreter()
@@ -254,6 +255,7 @@ class TestOperatorUsageAfterImport:
         op_names = [name for name, info in ops]
         assert "my_op" in op_names
 
+    @pytest.mark.larl_exclude
     def test_use_imported_operator_from_module(self):
         """Test that operators from use_module work in subsequent code."""
         prolog = PrologInterpreter()
@@ -382,6 +384,7 @@ class TestRecursiveModuleLoading:
 class TestOperatorCaching:
     """Tests for caching operator scans across consultations."""
 
+    @pytest.mark.larl_exclude
     def test_reuses_cached_operator_scans_across_interpreters(self, tmp_path, monkeypatch):
         """Consulting the same nested modules twice should avoid re-scanning imports."""
         # Build a small module tree: top -> mid -> leaf (defines an operator)

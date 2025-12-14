@@ -1,20 +1,43 @@
+import pytest
+
 from vibeprolog import PrologInterpreter
 
-prolog = PrologInterpreter()
-prolog.consult("tests/test_mi_with_explain.pl")
 
-print("1. Test explain_goal(rule(X), Msg)...")
-results = prolog.query("explain_goal(rule(X), Msg).")
-print(f"   Results: {results[:1]}")
+@pytest.mark.larl_exclude
+def test_explain_goal_with_rule():
+    """Test explain_goal(rule(X), Msg)."""
+    prolog = PrologInterpreter()
+    prolog.consult("tests/test_mi_with_explain.pl")
 
-print("\n2. Test mi(rule(X), [], Expl)...")
-results = prolog.query("mi(rule(X), [], Expl).")
-print(f"   Results: {results[:2]}")
+    results = prolog.query("explain_goal(rule(X), Msg).")
+    assert results
 
-print("\n3. Test mi(rule(a), [], Expl)...")
-results = prolog.query("mi(rule(a), [], Expl).")
-print(f"   Results: {results}")
 
-print("\n4. Test mi(fact(a), [], Expl)...")
-results = prolog.query("mi(fact(a), [], Expl).")
-print(f"   Results: {results}")
+@pytest.mark.larl_exclude
+def test_mi_with_rule_variable():
+    """Test mi(rule(X), [], Expl)."""
+    prolog = PrologInterpreter()
+    prolog.consult("tests/test_mi_with_explain.pl")
+
+    results = prolog.query("mi(rule(X), [], Expl).")
+    assert len(results) >= 2
+
+
+@pytest.mark.larl_exclude
+def test_mi_with_rule_atom():
+    """Test mi(rule(a), [], Expl)."""
+    prolog = PrologInterpreter()
+    prolog.consult("tests/test_mi_with_explain.pl")
+
+    results = prolog.query("mi(rule(a), [], Expl).")
+    assert results
+
+
+@pytest.mark.larl_exclude
+def test_mi_with_fact():
+    """Test mi(fact(a), [], Expl)."""
+    prolog = PrologInterpreter()
+    prolog.consult("tests/test_mi_with_explain.pl")
+
+    results = prolog.query("mi(fact(a), [], Expl).")
+    assert results

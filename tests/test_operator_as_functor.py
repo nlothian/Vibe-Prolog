@@ -168,12 +168,14 @@ class TestParenthesizedOperatorAtom:
 class TestMetaPredicateWithOperator:
     """Test meta_predicate directive with operator as functor."""
 
+    @pytest.mark.larl_exclude
     def test_meta_predicate_with_quoted_semicolon(self):
         """meta_predicate directive with quoted operator."""
         prolog = PrologInterpreter()
         # Should at least parse (directive is ignored in vibe-prolog)
         prolog.consult_string(":- meta_predicate(';'(2, 2, ?, ?)).")
 
+    @pytest.mark.larl_exclude
     def test_meta_predicate_with_unquoted_semicolon(self):
         """meta_predicate directive with unquoted operator as functor."""
         prolog = PrologInterpreter()

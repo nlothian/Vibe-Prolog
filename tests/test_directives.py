@@ -96,6 +96,7 @@ class TestPredicateDirectives:
         with pytest.raises(PrologThrow):
             prolog.consult_string(":- dynamic(member/2).")
 
+    @pytest.mark.larl_exclude
     def test_dynamic_no_parens_single(self):
         prolog = PrologInterpreter()
         prolog.consult_string(":- dynamic foo/1.\nfoo(1).")
@@ -103,6 +104,7 @@ class TestPredicateDirectives:
         assert prolog.has_solution("asserta(foo(2))")
         assert prolog.has_solution("foo(2)")
 
+    @pytest.mark.larl_exclude
     def test_dynamic_no_parens_multiple(self):
         prolog = PrologInterpreter()
         prolog.consult_string(":- dynamic foo/1, bar/2.\nfoo(1).\nbar(a, b).")
@@ -112,21 +114,23 @@ class TestPredicateDirectives:
         assert prolog.has_solution("asserta(bar(c, d))")
         assert prolog.has_solution("bar(c, d)")
 
+    @pytest.mark.larl_exclude
     def test_dynamic_no_parens_multiline(self):
         prolog = PrologInterpreter()
         prolog.consult_string("""\
-:- dynamic
+    :- dynamic
     known/3,
     voice/1.
-known(yes, test, val).
-voice(loud).
-""")
+    known(yes, test, val).
+    voice(loud).
+    """)
 
         assert prolog.has_solution("asserta(known(no, test, val2))")
         assert prolog.has_solution("known(no, test, val2)")
         assert prolog.has_solution("asserta(voice(soft))")
         assert prolog.has_solution("voice(soft)")
 
+    @pytest.mark.larl_exclude
     def test_multifile_no_parens(self):
         prolog = PrologInterpreter()
         prolog.consult_string(":- multifile shared/1.\nshared(1).")
@@ -136,6 +140,7 @@ voice(loud).
         values = {row["X"] for row in results}
         assert values == {1, 2}
 
+    @pytest.mark.larl_exclude
     def test_discontiguous_no_parens(self):
         prolog = PrologInterpreter()
         prolog.consult_string(

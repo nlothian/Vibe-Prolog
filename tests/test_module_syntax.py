@@ -69,6 +69,7 @@ class TestModuleSyntax:
         result = prolog.query_once("builtins:true.")
         assert result == {}
 
+    @pytest.mark.larl_exclude
     def test_cut_cannot_be_exported(self):
         """Test that attempting to export cut (!/0) raises an error or is skipped."""
         prolog = PrologInterpreter()

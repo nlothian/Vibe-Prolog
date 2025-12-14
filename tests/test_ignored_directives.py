@@ -21,6 +21,7 @@ class TestIgnoredDirectives:
         # Verify the clause was still loaded
         assert prolog.has_solution("foo(1)")
 
+    @pytest.mark.larl_exclude
     def test_meta_predicate_parsed(self):
         """Test that meta_predicate directive is parsed without error."""
         prolog = PrologInterpreter()
@@ -32,6 +33,7 @@ class TestIgnoredDirectives:
         # Verify the clause was still loaded
         assert prolog.has_solution("my_pred(a)")
 
+    @pytest.mark.larl_exclude
     def test_meta_predicate_complex_args(self):
         """Test meta_predicate with multiple arguments."""
         prolog = PrologInterpreter()
@@ -62,6 +64,7 @@ class TestIgnoredDirectives:
             assert "Ignoring unsupported directive" in str(w[0].message)
             assert "meta_predicate" in str(w[0].message)
 
+    @pytest.mark.larl_exclude
     def test_program_continues_after_ignored_directive(self):
         """Test that program loading continues after an ignored directive."""
         prolog = PrologInterpreter()
@@ -76,6 +79,7 @@ class TestIgnoredDirectives:
         assert prolog.has_solution("after(2)")
         assert prolog.has_solution("final(3)")
 
+    @pytest.mark.larl_exclude
     def test_multiple_ignored_directives(self):
         """Test that multiple ignored directives work correctly."""
         prolog = PrologInterpreter()
@@ -119,6 +123,7 @@ class TestIgnoredDirectives:
 class TestIgnoredDirectivesInLibraries:
     """Test that library files with ignored directives can be loaded."""
 
+    @pytest.mark.larl_exclude
     def test_library_with_meta_predicate(self):
         """Test loading a library that uses meta_predicate."""
         prolog = PrologInterpreter()

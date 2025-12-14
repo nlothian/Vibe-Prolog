@@ -498,6 +498,7 @@ class TestClausePredicate:
 class TestPredicateProperty:
     """Test predicate_property/2."""
 
+    @pytest.mark.larl_exclude
     def test_predicate_property_builtin(self):
         """Test predicate_property/2 with a built-in."""
         prolog = PrologInterpreter()

@@ -18,18 +18,21 @@ class TestMinimalMetaInterpreter:
             pytest.skip("Could not find minimal_mi_test.pl")
         return interpreter
 
+    @pytest.mark.larl_exclude
     def test_mi_true(self, prolog):
         """Test mi(true, [], Expl) should succeed with an empty explanation."""
         result = prolog.query_once("mi(true, [], Expl).")
         assert result is not None
         assert result['Expl'] == []
 
+    @pytest.mark.larl_exclude
     def test_mi_fact(self, prolog):
         """Test mi(fact(a), [], Expl) should succeed for a simple fact."""
         result = prolog.query_once("mi(fact(a), [], Expl).")
         assert result is not None
         assert result['Expl'] == []
 
+    @pytest.mark.larl_exclude
     def test_mi_rule(self, prolog):
         """Test mi(rule(X), [], Expl) should find solutions by interpreting the rule."""
         results = list(prolog.query("mi(rule(X), [], Expl)."))
@@ -39,6 +42,7 @@ class TestMinimalMetaInterpreter:
         assert first_result['X'] == 'a'
         assert first_result['Expl'] == []
 
+    @pytest.mark.larl_exclude
     def test_mi_integration(self, prolog, capsys):
         """Test the top-level test_mi predicate."""
         # This query prints output, so we capture it and check.

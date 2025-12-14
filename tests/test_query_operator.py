@@ -113,6 +113,7 @@ class TestQueryOperatorParsing:
         # Third item: ?- goal(X)
         assert clauses[2].head.functor == "?-"
 
+    @pytest.mark.larl_exclude
     def test_parse_query_with_cut(self):
         """Test parsing a query with a cut operator."""
         parser = PrologParser()

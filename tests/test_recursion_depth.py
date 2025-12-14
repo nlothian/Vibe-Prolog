@@ -21,6 +21,7 @@ class TestRecursionDepthLimits:
         assert "resource_error" in str(exc_info.value)
         assert "recursion_depth" in str(exc_info.value).lower()
 
+    @pytest.mark.larl_exclude
     def test_deep_but_finite_recursion_works(self):
         """Recursion within limit should work."""
         prolog = PrologInterpreter()

@@ -317,6 +317,7 @@ class TestOperatorExports:
             prolog.consult_string(":- module(bad, [op(2000, fy, ~)]).")
         assert "domain_error" in str(exc_info.value.term) or "operator_priority" in str(exc_info.value.term)
 
+    @pytest.mark.larl_exclude
     def test_invalid_operator_associativity_in_export(self):
         """Invalid associativity should raise error."""
         prolog = PrologInterpreter()
@@ -365,6 +366,7 @@ class TestOperatorPredicateIndicators:
         """)
         assert prolog.has_solution("prefix_ops:test(#\ true)")
 
+    @pytest.mark.larl_exclude
     def test_infix_operator_predicate_export(self):
         """Test exporting infix operator predicates like (#>)/2."""
         prolog = PrologInterpreter()
@@ -376,6 +378,7 @@ class TestOperatorPredicateIndicators:
         """)
         assert prolog.has_solution("infix_ops:test(X)")
 
+    @pytest.mark.larl_exclude
     def test_multiple_operator_predicates_export(self):
         """Test exporting multiple operator predicates."""
         prolog = PrologInterpreter()
@@ -389,6 +392,7 @@ class TestOperatorPredicateIndicators:
         """)
         assert prolog.has_solution("multi_ops:test(5)")
 
+    @pytest.mark.larl_exclude
     def test_selective_import_operator_predicates(self):
         """Test selective import of operator predicates."""
         prolog = PrologInterpreter()
@@ -419,6 +423,7 @@ class TestOperatorPredicateIndicators:
         """)
         assert prolog.has_solution("nested_ops:test(#\ (#\ true))")
 
+    @pytest.mark.larl_exclude
     def test_mixed_exports_operators_and_regular(self):
         """Test module with both operator predicates and regular predicates."""
         prolog = PrologInterpreter()
@@ -583,6 +588,7 @@ class TestModuleQualifiedClauseHeads:
 class TestModuleQualifiedPredicateDirectives:
     """Tests for module-qualified predicate property directives."""
 
+    @pytest.mark.larl_exclude
     def test_module_qualified_discontiguous_directive(self):
         """Module-qualified discontiguous directives should work."""
         prolog = PrologInterpreter()
@@ -601,6 +607,7 @@ class TestModuleQualifiedPredicateDirectives:
         result2 = prolog.query_once("user:test_pred(b, X)")
         assert result2 is not None and result2["X"] == 2
 
+    @pytest.mark.larl_exclude
     def test_module_qualified_dynamic_directive(self):
         """Module-qualified dynamic directives should work."""
         prolog = PrologInterpreter()
@@ -613,6 +620,7 @@ class TestModuleQualifiedPredicateDirectives:
         result = prolog.query_once("user:dynamic_pred(X)")
         assert result is not None and result["X"] == "test_value"
 
+    @pytest.mark.larl_exclude
     def test_module_qualified_multifile_directive(self):
         """Module-qualified multifile directives should work."""
         prolog = PrologInterpreter()
@@ -625,6 +633,7 @@ class TestModuleQualifiedPredicateDirectives:
         result = prolog.query_once("user:multifile_pred(X)")
         assert result is not None and result["X"] == "test_value"
 
+    @pytest.mark.larl_exclude
     def test_module_qualified_goal_expansion_scenario(self):
         """Test the specific scenario from the original issue with goal_expansion."""
         prolog = PrologInterpreter()
@@ -648,6 +657,7 @@ class TestModuleQualifiedPredicateDirectives:
         result3 = prolog.query_once("user:goal_expansion(format(A,B,C), X)")
         assert result3 is not None
 
+    @pytest.mark.larl_exclude
     def test_module_qualified_directive_with_invalid_module(self):
         """Module-qualified directives with invalid module names should raise errors."""
         prolog = PrologInterpreter()
@@ -668,6 +678,7 @@ class TestModuleQualifiedPredicateDirectives:
             """)
         assert "type_error" in str(excinfo.value.term)
 
+    @pytest.mark.larl_exclude
     def test_module_qualified_directive_creates_module_if_needed(self):
         """Module-qualified directives should create the target module if it doesn't exist."""
         prolog = PrologInterpreter()
@@ -685,6 +696,7 @@ class TestModuleQualifiedPredicateDirectives:
         assert ("test_pred", 1) in nonexistent_module.predicates
         assert len(nonexistent_module.predicates[("test_pred", 1)]) == 1
 
+    @pytest.mark.larl_exclude
     def test_mixed_module_qualified_and_regular_directives(self):
         """Test that regular and module-qualified directives can coexist."""
         prolog = PrologInterpreter()

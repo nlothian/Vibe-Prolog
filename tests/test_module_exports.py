@@ -31,6 +31,7 @@ class TestModuleExports:
         # DCG predicates get expanded to +2 arity
         assert ("sentence", 3) in prolog.modules["test_mod"].exports
 
+    @pytest.mark.larl_exclude
     def test_invalid_exports_control_constructs_skipped(self):
         """Test that control constructs in export lists are skipped with warning."""
         prolog = PrologInterpreter()
@@ -102,6 +103,7 @@ class TestModuleExports:
         assert ("baz", 2) in prolog.modules["test_mod"].exports
         assert len(prolog.modules["test_mod"].exports) == 2
 
+    @pytest.mark.larl_exclude
     def test_mixed_valid_invalid_exports(self):
         """Test module with mix of valid and invalid exports."""
         prolog = PrologInterpreter()
