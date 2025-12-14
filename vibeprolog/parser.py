@@ -3,10 +3,10 @@
 import re
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
 from lark import Lark, Transformer, v_args
-from lark.exceptions import LarkError, UnexpectedCharacters, UnexpectedToken
+from lark.exceptions import GrammarError, LarkError, UnexpectedCharacters, UnexpectedToken
 
 from vibeprolog.exceptions import PrologError, PrologThrow
 from vibeprolog.operator_defaults import DEFAULT_OPERATORS
@@ -120,18 +120,19 @@ PROLOG_GRAMMAR_TEMPLATE = r"""
     _RBRACE: "}"
     _COMMA: ","
     _PIPE: "|"
-    _COLON_DASH: ":-"
+    // Priority 36 ensures :- is matched before : (INFIX_OP_FUNCTOR has priority 35)
+    _COLON_DASH.36: ":-"
 
     start: (clause | directive)+
 
     clause: rule | dcg_rule | fact
     fact: term "."
-    rule: term ":-" goals "."
+    rule: term _COLON_DASH goals "."
     dcg_rule: term DCG_ARROW goals "."
     atom_or_compound: atom
         | atom "(" args ")"
 
-    directive: ":-" (op_directive | prefix_directive | property_directive | term) "."
+    directive: _COLON_DASH (op_directive | prefix_directive | property_directive | term) "."
 
     prefix_directive: "dynamic" predicate_indicators -> dynamic_directive
         | "multifile" predicate_indicators -> multifile_directive
@@ -153,6 +154,8 @@ PROLOG_GRAMMAR_TEMPLATE = r"""
     // Priority set to ensure special atoms like -$ are recognized, but still below SPECIAL_ATOM_OPS
     // NOTE: .. (range operator) must have HIGH priority to prevent being split into . . by lexer
     RANGE_OP.30: /\.\./
+    // Single dot as atom (for patterns like upto_what(Bs0, .)) - must outprioritize OP_SYMBOL_DIRECTIVE
+    DOT_ATOM.26: /\.(?=[,\)\]\s])/
     OP_SYMBOL_DIRECTIVE.25: /[+\-*\/<>=\\@#$&!~:?^.]+/
     OP_SYMBOL: /[+\-*\/<>=\\@#$&!~:?^.]+/
 
@@ -182,24 +185,29 @@ __OPERATOR_GRAMMAR__
     // Allow operator symbols as functors: ;(a,b), |(a,b), ,(a,b), ->(a,b), etc.
     operator_compound: operator_functor "(" args ")" -> operator_compound
     // Operators that can be used as functors when followed by (
-    operator_functor: INFIX_OP_FUNCTOR | CONTROL_OP_FUNCTOR | COMPARISON_OP_FUNCTOR | ARITH_OP_FUNCTOR | OP_SYMBOL
-    // Infix operators like ;, |, ,, ->, etc.
-    INFIX_OP_FUNCTOR.30: /;/ | /\|/ | /,/ | /->/ | /:/ | /=/ 
-    // Control operators
-    CONTROL_OP_FUNCTOR.30: /\\+/
-    // Comparison operators - but not < and > alone as they're in OP_SYMBOL
-    COMPARISON_OP_FUNCTOR.30: /=:=/ | /=\\=/ | /=</ | />=/ | /=@=/ | /\\=@=/ | /==/ | /\\==/
-    // Arithmetic operators that can also be prefix/postfix - must be followed by ( for functor use
-    ARITH_OP_FUNCTOR.30: /\+/ | /-/ | /\*/ | /\//
+    operator_functor: INFIX_OP_FUNCTOR | ARITH_OP_FUNCTOR | COMPARISON_OP_FUNCTOR | OP_SYMBOL
+    // Infix operators like ;, |, ,, ->, etc. - only match when followed by (
+    // Higher priority (36) ensures these match when followed by (
+    INFIX_OP_FUNCTOR.36: /;(?=\()/ | /\|(?=\()/ | /,(?=\()/ | /->(?=\()/ | /:(?=\()/ | /=(?=\()/ | /<(?=\()/ | />(?=\()/
+    // Control operators - only match when followed by (
+    CONTROL_OP_FUNCTOR.36: /\\+(?=\()/
+    // Comparison operators with lookahead - only match when followed by (
+    COMPARISON_OP_FUNCTOR.36: /=:=(?=\()/ | /=\\=(?=\()/ | /=<(?=\()/ | />=(?=\()/ | /=@=(?=\()/ | /\\=@=(?=\()/ | /==(?=\()/ | /\\==(?=\()/
+    // Arithmetic operators - only match when followed by (
+    // This allows +(a,b) to be parsed as operator_compound instead of prefix operator
+    ARITH_OP_FUNCTOR.36: /\+(?=\()/ | /-(?=\()/ | /\*(?=\()/ | /\/(?=\()/
     // Parenthesized operator as atom: (;), (|), (,), (->), etc.
-    operator_as_atom: INFIX_OP_FUNCTOR | CONTROL_OP_FUNCTOR | COMPARISON_OP_FUNCTOR | ARITH_OP_FUNCTOR | OP_SYMBOL
-    operator_atom: OPERATOR_ATOM
-    args: term ("," term)*
+    // Lower priority (34) so functor patterns match first when followed by (
+    INFIX_OP_ATOM.34: /;/ | /\|/ | /,/ | /->/ | /:/ | /=/ | /\+/ | /-/ | /\*/ | /\// | /</ | />/ | /=:=/ | /=\\=/ | /=</ | />=/ | /=@=/ | /\\=@=/ | /==/ | /\\==/
+    operator_as_atom: INFIX_OP_ATOM
+    operator_atom: OPERATOR_ATOM | operator_table_token
+    // args uses 'arg' (not 'term') so comma is treated as separator, not operator
+    args: arg ("," arg)*
 
     curly_braces: "{" term "}"
 
-    DCG_ARROW.35: "-->"
-    OPERATOR_ATOM.35: ":-"
+    DCG_ARROW.36: "-->"
+    OPERATOR_ATOM.36: ":-"
 
     list: "[" "]"                          -> empty_list
         | "[" list_items "]"               -> list_items_only
@@ -208,7 +216,7 @@ __OPERATOR_GRAMMAR__
     list_items: term ("," term)*
 
     string: STRING
-    atom: ATOM | SPECIAL_ATOM | SPECIAL_ATOM_OPS | OP_SYMBOL
+    atom: ATOM | SPECIAL_ATOM | SPECIAL_ATOM_OPS | OP_SYMBOL | DOT_ATOM
     variable: VARIABLE
     char_code: CHAR_CODE
     number: NUMBER
@@ -221,11 +229,11 @@ __OPERATOR_GRAMMAR__
     // following tokens like the clause terminator.
     CHAR_CODE.5: /0'(?:''|\\x[0-9A-Fa-f]+\\?|\\u[0-9A-Fa-f]{4}|\\[0-7]{1,3}|\\[abdefnrstvs\\\"']|[^'\\])'?/ | /[1-9]\d*'.'/
 
-    STRING: /(?s)"(\\.|[^"])*"/
-    SPECIAL_ATOM: /(?s)'(\\.|''|[^'])*'/
+    STRING: /(?s:"(\\.|[^"])*")/
+    SPECIAL_ATOM: /(?s:'(\\.|''|[^'])*')/
 
     // Special atom operators must have HIGHEST priority to prevent being parsed as prefix operators
-    SPECIAL_ATOM_OPS.12: /-\$/ | /\$-/
+    SPECIAL_ATOM_OPS.35: /-\$/ | /\$-/
 
     // Scientific notation, hex, octal, binary, Edinburgh <radix>'<number>
     NUMBER.4: /-?0x[0-9a-fA-F]+/i
@@ -395,6 +403,15 @@ class PrologTransformer(Transformer):
         else:
             return [compound]
 
+    def _rebuild_comma_chain(self, terms):
+        """Rebuild a right-associative comma chain from collected terms."""
+        if not terms:
+            return None
+        result = terms[-1]
+        for term in reversed(terms[:-1]):
+            result = Compound(",", (term, result))
+        return result
+
     @v_args(meta=True)
     def fact(self, meta, items):
         return Clause(head=items[0], body=None, meta=meta)
@@ -421,6 +438,22 @@ class PrologTransformer(Transformer):
                 result.extend(self._collect_comma_terms(item))
             else:
                 result.append(item)
+
+        # When a leading conjunction was captured as part of a disjunction,
+        # peel off the first goal to match the intended goal separation.
+        if len(result) == 1:
+            candidate = result[0]
+            if isinstance(candidate, Compound) and candidate.functor == ';':
+                left, right = candidate.args
+                if isinstance(left, (Compound, ParenthesizedComma)) and getattr(left, "functor", None) == ',':
+                    leading_terms = self._collect_comma_terms(left)
+                    if len(leading_terms) >= 2:
+                        first_goal = leading_terms[0]
+                        if isinstance(first_goal, List):
+                            return result
+                        rebuilt_left = self._rebuild_comma_chain(leading_terms[1:])
+                        if rebuilt_left is not None:
+                            result = [first_goal, Compound(";", (rebuilt_left, right))]
         return result
 
     def term(self, items):
@@ -585,6 +618,10 @@ class PrologTransformer(Transformer):
         """Convert operator token to Atom."""
         token_str = str(items[0])
         return Atom(token_str)
+
+    def operator_table_token(self, items):
+        """Pass through dynamically generated operator tokens for atom handling."""
+        return items[0]
 
     def operator_functor(self, items):
         """Convert operator token to Atom for use as functor."""
@@ -1499,7 +1536,21 @@ def _is_alphabetic_operator(name: str) -> bool:
     return name.isalpha() or (name.replace("_", "").isalnum() and name[0].isalpha())
 
 
-def _format_operator_literals(ops: Iterable[str]) -> str:
+def _format_operator_literals(
+    ops: Iterable[str], *, exclude_before_paren: bool = False, is_infix: bool = False
+) -> str:
+    """Format operator literals for Lark grammar.
+
+    Args:
+        ops: Operator names to format
+        exclude_before_paren: If True, use negative lookahead to prevent matching
+            when the operator is immediately followed by '('. This is used for
+            prefix operators so that `+(a, b)` is parsed as operator_compound,
+            not as prefix + applied to parenthesized (a, b).
+        is_infix: If True, apply special handling for infix operators that could
+            be prefixes of multi-character operators (e.g., ':' shouldn't match
+            when followed by '-' to form ':-').
+    """
     # Sort longest operators first so sequences like "\\+" take precedence over
     # shorter prefixes such as "\\".
     formatted: list[str] = []
@@ -1508,6 +1559,16 @@ def _format_operator_literals(ops: Iterable[str]) -> str:
             # Alphabetic operators need word boundaries to prevent matching
             # inside atoms like 'indexed' matching 'in' + 'dexed'
             formatted.append(f'/(?<![a-zA-Z0-9_]){escape_for_lark(op)}(?![a-zA-Z0-9_])/')
+        elif exclude_before_paren:
+            # Use negative lookahead to prevent matching when followed by '('
+            # This allows operator_compound to match instead
+            formatted.append(f'/{re.escape(op)}(?!\\()/')
+        elif is_infix and op == ":":
+            # Special case: ':' should not match when followed by '-' (forming ':-')
+            formatted.append(r'/:(?!-)/')
+        elif is_infix and op == "-":
+            # Special case: '-' should not match when followed by '-' or '>' (forming '--' or '->')
+            formatted.append(r'/-(?![->\(])/')
         else:
             formatted.append(f'"{escape_for_lark(op)}"')
     return " | ".join(formatted)
@@ -1527,13 +1588,19 @@ def _operator_token_priority(name: str) -> int:
     """
 
     if any(ch.isalnum() or ch == "_" for ch in name):
-        return 0
+        # Alphabetic operators need priority > ATOM.3 to be matched before ATOM
+        return 4
 
     if len(name) == 1:
-        return 0
+        # Single-character graphic operators (like '-') must outrank the
+        # generic arithmetic functor tokens so unary parsing keeps the
+        # operator table's precedence and associativity.
+        return 31
 
     if name in {":-", "-->", "?-"}:
-        return 0
+        # These special operators must outrank their single-character prefixes
+        # (: and -) which have priority 31. Use standard length-based formula.
+        return 30 + len(name)
 
     # Punctuation-only operators should outrank OP_SYMBOL (priority 25) and use
     # longest match to beat their own prefixes.
@@ -1580,7 +1647,16 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
         lambda: {"prefix": defaultdict(list), "infix": defaultdict(list), "postfix": defaultdict(list)}
     )
 
+    # Operators with special syntactic roles in clause/directive structure.
+    # These are handled by dedicated grammar productions (rule, directive, dcg_rule)
+    # and should not be included as term-level operators.
+    # Note: ?- is NOT excluded because it's used as a prefix operator for queries
+    # and should be parseable within terms.
+    CLAUSE_STRUCTURE_OPS = {":-", "-->"}
+
     for precedence, spec, name in operators:
+        if name in CLAUSE_STRUCTURE_OPS:
+            continue  # Skip - handled by grammar template
         if spec in {"fx", "fy"}:
             grouped[precedence]["prefix"][spec].append(name)
         elif spec in {"xf", "yf"}:
@@ -1590,6 +1666,7 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
 
     rules: list[str] = []
     tokens: list[str] = []
+    operator_token_names: list[str] = []
 
     lower_rule = "primary"
     precedence_levels = sorted(grouped.keys())
@@ -1603,13 +1680,38 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
         prefix_specs = grouped[precedence]["prefix"]
         postfix_specs = grouped[precedence]["postfix"]
 
+        if prefix_specs.get("fx"):
+            for name in sorted(prefix_specs["fx"]):
+                token_counter += 1
+                token = f"PREFIX_FX_{precedence}_{token_counter}"
+                priority = _operator_token_priority(name) + 1
+                token_def = f"{token}.{priority}" if priority else token
+                # Use negative lookahead: prefix operators don't match when followed by (
+                # This allows operator_compound to match +(a, b) as functor call
+                tokens.append(f"    {token_def}: {_format_operator_literals([name], exclude_before_paren=True)}")
+                operator_token_names.append(token)
+                parts.append(f"{token} {lower_rule} -> prefix_fx")
+        if prefix_specs.get("fy"):
+            for name in sorted(prefix_specs["fy"]):
+                token_counter += 1
+                token = f"PREFIX_FY_{precedence}_{token_counter}"
+                priority = _operator_token_priority(name) + 1
+                token_def = f"{token}.{priority}" if priority else token
+                # Use negative lookahead: prefix operators don't match when followed by (
+                # This allows operator_compound to match +(a, b) as functor call
+                tokens.append(f"    {token_def}: {_format_operator_literals([name], exclude_before_paren=True)}")
+                operator_token_names.append(token)
+                parts.append(f"{token} {rule_name} -> prefix_fy")
+
         if infix_specs.get("xfx"):
             for name in sorted(infix_specs["xfx"]):
                 token_counter += 1
                 token = f"INFIX_XFX_{precedence}_{token_counter}"
                 priority = _operator_token_priority(name)
                 token_def = f"{token}.{priority}" if priority else token
-                tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                # Use is_infix=True to apply special handling for operators like ':'
+                tokens.append(f"    {token_def}: {_format_operator_literals([name], is_infix=True)}")
+                operator_token_names.append(token)
                 parts.append(f"{lower_rule} {token} {lower_rule} -> infix_xfx")
         if infix_specs.get("yfx"):
             for name in sorted(infix_specs["yfx"]):
@@ -1617,7 +1719,9 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
                 token = f"INFIX_YFX_{precedence}_{token_counter}"
                 priority = _operator_token_priority(name)
                 token_def = f"{token}.{priority}" if priority else token
-                tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                # Use is_infix=True to apply special handling for operators like '-'
+                tokens.append(f"    {token_def}: {_format_operator_literals([name], is_infix=True)}")
+                operator_token_names.append(token)
                 parts.append(f"{rule_name} {token} {lower_rule} -> infix_yfx")
         if infix_specs.get("xfy"):
             for name in sorted(infix_specs["xfy"]):
@@ -1625,7 +1729,9 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
                 token = f"INFIX_XFY_{precedence}_{token_counter}"
                 priority = _operator_token_priority(name)
                 token_def = f"{token}.{priority}" if priority else token
-                tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                # Use is_infix=True to apply special handling for operators like ':'
+                tokens.append(f"    {token_def}: {_format_operator_literals([name], is_infix=True)}")
+                operator_token_names.append(token)
                 parts.append(f"{lower_rule} {token} {rule_name} -> infix_xfy")
         if infix_specs.get("yfy"):
             for name in sorted(infix_specs["yfy"]):
@@ -1633,25 +1739,10 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
                 token = f"INFIX_YFY_{precedence}_{token_counter}"
                 priority = _operator_token_priority(name)
                 token_def = f"{token}.{priority}" if priority else token
-                tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                # Use is_infix=True to apply special handling for operators like ':'
+                tokens.append(f"    {token_def}: {_format_operator_literals([name], is_infix=True)}")
+                operator_token_names.append(token)
                 parts.append(f"{rule_name} {token} {rule_name} -> infix_yfy")
-
-        if prefix_specs.get("fx"):
-            for name in sorted(prefix_specs["fx"]):
-                token_counter += 1
-                token = f"PREFIX_FX_{precedence}_{token_counter}"
-                priority = _operator_token_priority(name)
-                token_def = f"{token}.{priority}" if priority else token
-                tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
-                parts.append(f"{token} {lower_rule} -> prefix_fx")
-        if prefix_specs.get("fy"):
-            for name in sorted(prefix_specs["fy"]):
-                token_counter += 1
-                token = f"PREFIX_FY_{precedence}_{token_counter}"
-                priority = _operator_token_priority(name)
-                token_def = f"{token}.{priority}" if priority else token
-                tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
-                parts.append(f"{token} {rule_name} -> prefix_fy")
 
         if postfix_specs.get("xf"):
             for name in sorted(postfix_specs["xf"]):
@@ -1660,6 +1751,7 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
                 priority = _operator_token_priority(name)
                 token_def = f"{token}.{priority}" if priority else token
                 tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                operator_token_names.append(token)
                 parts.append(f"{lower_rule} {token} -> postfix_xf")
         if postfix_specs.get("yf"):
             for name in sorted(postfix_specs["yf"]):
@@ -1668,6 +1760,7 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
                 priority = _operator_token_priority(name)
                 token_def = f"{token}.{priority}" if priority else token
                 tokens.append(f"    {token_def}: {_format_operator_literals([name])}")
+                operator_token_names.append(token)
                 parts.append(f"{rule_name} {token} -> postfix_yf")
 
         rule_body = "\n        | ".join(parts)
@@ -1675,6 +1768,22 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
         lower_rule = rule_name
 
     rules.append(f"?term: {lower_rule}")
+
+    # Find the highest level below comma (precedence 1000) for argument parsing.
+    # Inside function arguments, comma is an argument separator, not the comma operator.
+    # So args should parse terms that exclude the comma operator.
+    arg_level = max((p for p in precedence_levels if p < 1000), default=None)
+    if arg_level is not None:
+        rules.append(f"?arg: level_{arg_level}")
+    else:
+        # No operators below comma, use primary
+        rules.append("?arg: primary")
+
+    if operator_token_names:
+        token_union = " | ".join(operator_token_names)
+    else:
+        token_union = "OPERATOR_ATOM"
+    rules.append(f"operator_table_token: {token_union}")
     rules.extend(tokens)
 
     return "\n".join(rules) + "\n"
@@ -1683,15 +1792,21 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
 class PrologParser:
     """Parse Prolog source code with support for dynamic operators."""
 
-    def __init__(self, operator_table=None):
+    def __init__(self, operator_table=None, *, parser_backend: str = "auto"):
+        if parser_backend not in {"auto", "lalr", "earley"}:
+            raise ValueError(f"Unsupported parser backend: {parser_backend}")
         self.operator_table = operator_table
         # Character conversion table: maps single chars to single chars
         # Initially identity (no conversions active)
         self._char_conversions: dict[str, str] = {}
-        self.parser = None
-        # Cache parsers keyed by module context and operator signature so we do
-        # not rebuild the Earley grammar for every clause/directive.
-        self._parser_cache: dict[tuple[str | None, tuple[tuple[int, str, str], ...]], Lark] = {}
+        self.parser: Lark | None = None
+        self._active_backend: str | None = None
+        self._preferred_backend = parser_backend
+        # Cache parsers keyed by module context, operator signature, and backend
+        # so we do not rebuild the grammar for every clause/directive.
+        self._parser_cache: dict[
+            tuple[str | None, tuple[tuple[int, str, str], ...], str], Lark
+        ] = {}
 
     def set_char_conversion(self, from_char: str, to_char: str) -> None:
         """Set a character conversion.
@@ -1772,14 +1887,30 @@ class PrologParser:
         
         return ''.join(result)
 
-    def _create_parser(self, grammar: str):
-        return Lark(
-            grammar,
-            parser="earley",
-            propagate_positions=True,
-            ambiguity='resolve',
-            start=["start", "clause", "directive"],
-        )
+    def _create_parser(self, grammar: str, *, backend: str) -> Lark:
+        if backend == "lalr":
+            parser = Lark(
+                grammar,
+                parser="lalr",
+                lexer="contextual",
+                propagate_positions=True,
+                maybe_placeholders=False,
+                start=["start", "clause", "directive"],
+            )
+        elif backend == "earley":
+            parser = Lark(
+                grammar,
+                parser="earley",
+                lexer="basic",  # Use basic lexer for proper longest-match tokenization
+                propagate_positions=True,
+                ambiguity="resolve",
+                start=["start", "clause", "directive"],
+            )
+        else:
+            raise ValueError(f"Unknown parser backend: {backend}")
+
+        parser.prolog_backend = backend
+        return parser
 
     def _base_operator_definitions(
         self, module_name: str | None = None
@@ -1796,17 +1927,33 @@ class PrologParser:
         operator_rules = generate_operator_rules(operators)
         return PROLOG_GRAMMAR_TEMPLATE.replace("{UNICODE_LETTER_RANGES}", UNICODE_LETTER_RANGES).replace("__OPERATOR_GRAMMAR__", operator_rules)
 
+    def _prepare_grammar_for_backend(self, grammar: str, backend: str) -> str:
+        if backend != "lalr":
+            return grammar
+
+        # For LALR, remove OP_SYMBOL from atom but keep DOT_ATOM for single dot atoms
+        return grammar.replace(
+            "atom: ATOM | SPECIAL_ATOM | SPECIAL_ATOM_OPS | OP_SYMBOL | DOT_ATOM",
+            "atom: ATOM | SPECIAL_ATOM | DOT_ATOM",
+        )
+
     def _parser_cache_key(
-        self, operators: list[tuple[int, str, str]], module_name: str | None
-    ) -> tuple[str | None, tuple[tuple[int, str, str], ...]]:
-        return (module_name, tuple(operators))
+        self,
+        operators: list[tuple[int, str, str]],
+        module_name: str | None,
+        backend: str,
+    ) -> tuple[str | None, tuple[tuple[int, str, str], ...], str]:
+        return (module_name, tuple(operators), backend)
 
     def _ensure_parser(
         self,
         cleaned_text: str,
         directive_ops: list[tuple[int, str, str]] | None = None,
         module_name: str | None = None,
+        backend: str | None = None,
     ) -> None:
+        if backend is not None and backend not in {"auto", "lalr", "earley"}:
+            raise ValueError(f"Unsupported parser backend: {backend}")
         if directive_ops is None:
             try:
                 directive_ops = extract_op_directives(cleaned_text)
@@ -1815,13 +1962,38 @@ class PrologParser:
         operators = _merge_operators(
             self._base_operator_definitions(module_name), directive_ops
         )
-        cache_key = self._parser_cache_key(operators, module_name)
-        cached_parser = self._parser_cache.get(cache_key)
-        if cached_parser is None:
-            grammar = self._build_grammar(operators)
-            cached_parser = self._create_parser(grammar)
-            self._parser_cache[cache_key] = cached_parser
-        self.parser = cached_parser
+        preferred_backend = backend or self._preferred_backend
+        backend_order = (
+            ("lalr", "earley") if preferred_backend == "auto" else (preferred_backend,)
+        )
+
+        grammar: str | None = None
+        for candidate in backend_order:
+            cache_key = self._parser_cache_key(operators, module_name, candidate)
+            cached_parser = self._parser_cache.get(cache_key)
+            if cached_parser is not None:
+                self.parser = cached_parser
+                self._active_backend = candidate
+                return
+
+            if grammar is None:
+                grammar = self._build_grammar(operators)
+
+            try:
+                candidate_grammar = self._prepare_grammar_for_backend(
+                    grammar, candidate
+                )
+                parser = self._create_parser(candidate_grammar, backend=candidate)
+                self._parser_cache[cache_key] = parser
+                self.parser = parser
+                self._active_backend = candidate
+                return
+            except GrammarError:
+                if preferred_backend != "auto":
+                    raise
+                continue
+
+        raise GrammarError("Could not build a parser with any available backend")
 
     def _strip_block_comments(self, text: str) -> tuple[str, list[tuple[int, str]]]:
         """Strip block comments from text, handling nesting and quoted strings.
@@ -1990,6 +2162,16 @@ class PrologParser:
                     payload.doc = last_comment_text
                 last_comment_text = None
 
+    def _with_fallback(self, do_parse: Callable[[str | None], Any]):
+        """Invoke a parsing function and fall back to Earley when appropriate."""
+
+        try:
+            return do_parse(None)
+        except (UnexpectedToken, UnexpectedCharacters, GrammarError):
+            if self._preferred_backend == "auto" and self._active_backend == "lalr":
+                return do_parse("earley")
+            raise
+
     def parse(
         self,
         text: str,
@@ -2013,42 +2195,44 @@ class PrologParser:
             if apply_char_conversions:
                 text = self._apply_char_conversions(text)
             cleaned_text, pldoc_comments = self._collect_pldoc_comments(text)
-            self._ensure_parser(cleaned_text, directive_ops, module_name)
-            transformer = PrologTransformer()
             parsed_items: list[Clause | Directive] = []
 
-            # Parse each clause/directive separately to avoid Earley state explosion
-            # on large files with many clauses.
-            statements = tokenize_prolog_statements(cleaned_text)
-            search_pos = 0
-            for statement in statements:
-                # Track position of the statement within the cleaned text so that
-                # PlDoc association via start_pos still works.
-                stmt_pos = cleaned_text.find(statement, search_pos)
-                if stmt_pos == -1:
-                    raise RuntimeError(
-                        f"Could not re-locate tokenized statement in text: {statement!r}"
-                    )
-                search_pos = stmt_pos + len(statement)
+            def parse_with_backend(backend_override: str | None) -> list[Clause | Directive]:
+                self._ensure_parser(cleaned_text, directive_ops, module_name, backend_override)
+                transformer = PrologTransformer()
+                items: list[Clause | Directive] = []
 
-                stripped = statement.lstrip()
-                start_rule = "directive" if stripped.startswith(":-") else "clause"
-                try:
-                    tree = self.parser.parse(statement, start=start_rule)
-                except LarkError:
-                    tree = self.parser.parse(statement, start="start")
-                transformed = transformer.transform(tree)
-                if isinstance(transformed, list):
-                    parsed = transformed
-                else:
-                    parsed = [transformed]
+                statements = tokenize_prolog_statements(cleaned_text)
+                search_pos = 0
+                for statement in statements:
+                    stmt_pos = cleaned_text.find(statement, search_pos)
+                    if stmt_pos == -1:
+                        raise RuntimeError(
+                            f"Could not re-locate tokenized statement in text: {statement!r}"
+                        )
+                    search_pos = stmt_pos + len(statement)
 
-                items = [self._fold_numeric_unary_minus(item) for item in parsed]
-                for item in items:
-                    meta = getattr(item, "meta", None)
-                    if meta is not None and hasattr(meta, "start_pos"):
-                        meta.start_pos += stmt_pos
-                parsed_items.extend(items)
+                    stripped = statement.lstrip()
+                    start_rule = "directive" if stripped.startswith(":-") else "clause"
+                    try:
+                        tree = self.parser.parse(statement, start=start_rule)
+                    except LarkError:
+                        tree = self.parser.parse(statement, start="start")
+                    transformed = transformer.transform(tree)
+                    if isinstance(transformed, list):
+                        parsed = transformed
+                    else:
+                        parsed = [transformed]
+
+                    folded = [self._fold_numeric_unary_minus(item) for item in parsed]
+                    for item in folded:
+                        meta = getattr(item, "meta", None)
+                        if meta is not None and hasattr(meta, "start_pos"):
+                            meta.start_pos += stmt_pos
+                    items.extend(folded)
+                return items
+
+            parsed_items = self._with_fallback(parse_with_backend)
             # Associate PlDoc comments with items
             self._associate_pldoc_comments(parsed_items, pldoc_comments)
             return parsed_items
@@ -2122,15 +2306,22 @@ class PrologParser:
             if apply_char_conversions:
                 clause_text = self._apply_char_conversions(clause_text)
             cleaned_text, _ = self._collect_pldoc_comments(clause_text)
-            self._ensure_parser(cleaned_text)
-            tree = self.parser.parse(cleaned_text, start="start")
             transformer = PrologTransformer()
-            result = transformer.transform(tree)
-            if result and isinstance(result[0], Clause):
-                compound = result[0].head
-                if isinstance(compound, Compound) and compound.args:
-                    return compound.args[0]
-            raise ValueError(f"Failed to parse term: {text}")
+
+            def parse_term_with_backend(backend_override: str | None):
+                self._ensure_parser(cleaned_text, backend=backend_override)
+                tree = self.parser.parse(cleaned_text, start="start")
+                transformed = transformer.transform(tree)
+                if transformed and isinstance(transformed[0], Clause):
+                    compound = transformed[0].head
+                    if isinstance(compound, Compound) and compound.args:
+                        return compound.args[0]
+                raise ValueError(f"Failed to parse term: {text}")
+
+            return self._with_fallback(parse_term_with_backend)
+        except GrammarError as e:
+            error_term = PrologError.syntax_error(str(e), context)
+            raise PrologThrow(error_term)
         except LarkError as e:
             # Convert Lark parse error to Prolog syntax_error
             error_term = PrologError.syntax_error(str(e), context)

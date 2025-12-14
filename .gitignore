@@ -30,5 +30,5 @@ website/.astro/
 # Cached AST artifacts
 **/.vibe_parsed_cache/
 
-
 .env
+*/**/.vibe_parsed_cache/**
