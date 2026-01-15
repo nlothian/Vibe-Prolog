@@ -113,30 +113,32 @@ Handle Prolog errors like this:
 
 ### Running Tests
 
+Always run tests in parallel. The are too slow otherwuse
+
 ```bash
 # Run all tests
-uv run pytest 
+uv run pytest  -n auto
 
 # Run all tests including performance (skipped by default). This is slow so run only when required.
-uv run pytest --run-performance
+uv run pytest --run-performance  -n auto
 
 # Run all slow tests (tests empirically longer than ~4 seconds). Skip unless flag is present.
-uv run pytest --run-slow-tests
+uv run pytest --run-slow-tests  -n auto
 
 # Run specific test file
-uv run pytest tests/test_builtins.py
+uv run pytest tests/test_builtins.py  -n auto
 
 # Run specific test class
-uv run pytest tests/test_builtins.py::TestAppend
+uv run pytest tests/test_builtins.py::TestAppend  -n auto
 
 # Run specific test
-uv run pytest tests/test_builtins.py::TestAppend::test_append_two_lists
+uv run pytest tests/test_builtins.py::TestAppend::test_append_two_lists  -n auto
 
 # Run with verbose output
-uv run pytest -v
+uv run pytest -v  -n auto
 
 # Run with output capture disabled (see print statements)
-uv run pytest -s
+uv run pytest -s  -n auto
 ```
 
 ### Long-running tests

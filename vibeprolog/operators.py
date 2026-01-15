@@ -52,15 +52,24 @@ class OperatorTable:
                 - 'shadow': Allow module-scoped redefinitions of protected operators
         """
         self._table: dict[tuple[str, str], OperatorInfo] = {}
+        # Reserved reader syntax: these operators are parsed at the grammar level
+        # (Layer 1) and cannot be redefined via op/3. They include:
+        # - Clause structure: :-, ?-, --> (directive/rule/query/DCG markers)
+        # - Structural separators: , (in goals/args)
+        # - Control flow: ;, -> (disjunction, if-then - still user-facing but protected)
+        # - Module qualification: : (module:predicate syntax)
+        # - List/constraint syntax: | (list tail, CLP constraints)
+        # - Grouping: {}, (), [] (curly braces, parentheses, brackets)
         self._protected_ops: set[str] = {
-            ",",
-            ";",
-            "->",
-            ":-",
-            "?-",
-            ":",
-            "|",
-            "{}",
+            ",",      # Conjunction - structural in goals/args
+            ";",      # Disjunction
+            "->",     # If-then
+            ":-",     # Clause/directive marker
+            "?-",     # Query marker
+            "-->",    # DCG arrow
+            ":",      # Module qualification
+            "|",      # List tail / constraint syntax
+            "{}",     # Curly braces
             "(",
             ")",
             "[",
@@ -221,10 +230,50 @@ class OperatorTable:
         changed = False
 
         if name in self._protected_ops:
-            error_term = PrologError.permission_error(
-                "modify", "operator", Atom(name), context
-            )
-            raise PrologThrow(error_term)
+            is_user_scope = module_name is not None and module_name == "user"
+            if self._builtin_conflict == "error" or (
+                self._builtin_conflict == "skip" and is_user_scope
+            ):
+                error_term = PrologError.permission_error(
+                    "modify", "operator", Atom(name), context
+                )
+                raise PrologThrow(error_term)
+            elif self._builtin_conflict == "skip":
+                if module_name is not None and module_name != "user":
+                    module_ops = self._module_operators.setdefault(module_name, {})
+                    if precedence_value == 0:
+                        removed = module_ops.pop(key, None)
+                        changed = removed is not None
+                    else:
+                        info = OperatorInfo(precedence_value, spec)
+                        previous = module_ops.get(key)
+                        module_ops[key] = info
+                        changed = changed or (previous != info)
+                    if changed:
+                        self._version += 1
+                    return
+                else:
+                    return
+            elif self._builtin_conflict == "shadow":
+                if module_name is not None:
+                    module_ops = self._module_operators.setdefault(module_name, {})
+                    if precedence_value == 0:
+                        removed = module_ops.pop(key, None)
+                        self._shadowed_operators.discard((module_name, name, spec))
+                        changed = removed is not None
+                    else:
+                        info = OperatorInfo(precedence_value, spec)
+                        previous = module_ops.get(key)
+                        module_ops[key] = info
+                        shadow_key = (module_name, name, spec)
+                        if shadow_key not in self._shadowed_operators or previous != info:
+                            changed = True
+                        self._shadowed_operators.add(shadow_key)
+                    if changed:
+                        self._version += 1
+                    return
+                else:
+                    return
 
         if precedence_value == 0:
             removed = self._table.pop(key, None)

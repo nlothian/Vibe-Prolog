@@ -118,11 +118,14 @@ PROLOG_GRAMMAR_TEMPLATE = r"""
     _RBRA: "]"
     _LBRACE: "{"
     _RBRACE: "}"
-    _COMMA: ","
+    // Note: No _COMMA terminal - comma is the conjunction operator (INFIX_XFY at 1000)
+    // and is tokenized via the generated operator grammar. Grammar rules use "," literal
+    // which matches the operator token.
     _PIPE: "|"
-    // Priority 36 ensures :- and ?- are matched before : (INFIX_OP_FUNCTOR has priority 35)
-    _COLON_DASH.36: ":-"
-    _QUERY_MARKER.36: "?-"
+    // Priority 38 ensures :- and ?- are matched before OPERATOR_ATOM (priority 36)
+    // These are reserved clause structure markers that cannot be redefined via op/3
+    _COLON_DASH.38: ":-"
+    _QUERY_MARKER.38: "?-"
 
     start: (clause | directive | query)+
 
@@ -199,11 +202,14 @@ __OPERATOR_GRAMMAR__
     // This allows +(a,b) to be parsed as operator_compound instead of prefix operator
     ARITH_OP_FUNCTOR.36: /\+(?=\()/ | /-(?=\()/ | /\*(?=\()/ | /\/(?=\()/
     // Parenthesized operator as atom: (;), (|), (,), (->), etc.
-    // Lower priority (34) so functor patterns match first when followed by (
-    INFIX_OP_ATOM.34: /;/ | /\|/ | /,/ | /->/ | /:/ | /=/ | /\+/ | /-/ | /\*/ | /\// | /</ | />/ | /=:=/ | /=\\=/ | /=</ | />=/ | /=@=/ | /\\=@=/ | /==/ | /\\==/
+    // Priority 20 is below generated operator tokens (30+len) so normal infix parsing works.
+    // This token is only used in `operator_as_atom` for parenthesized operators like (->).
+    INFIX_OP_ATOM.20: /;/ | /\|/ | /,/ | /->/ | /:/ | /=/ | /\+/ | /-/ | /\*/ | /\// | /</ | />/ | /=:=/ | /=\\=/ | /=</ | />=/ | /=@=/ | /\\=@=/ | /==/ | /\\==/
     operator_as_atom: INFIX_OP_ATOM
     operator_atom: OPERATOR_ATOM | operator_table_token
     // args uses 'arg' (not 'term') so comma is treated as separator, not operator
+    // The arg rule parses at precedence below 1000 (comma's level), so comma doesn't
+    // get consumed as an operator within arguments.
     args: arg ("," arg)*
 
     curly_braces: "{" term "}"
@@ -1660,11 +1666,13 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
 
     # Reserved reader syntax: operators with special syntactic roles in clause/directive
     # structure. These are handled by dedicated grammar productions (rule, directive,
-    # dcg_rule, goals, args) and MUST NOT be included as term-level operators.
+    # dcg_rule) and MUST NOT be included as term-level operators.
     # - :- and ?- are clause/directive markers (Layer 1)
     # - --> is the DCG arrow (Layer 1)
-    # - , is structural in goals/args (Layer 1), not parsed via precedence
-    RESERVED_READER_SYNTAX = {":-", "-->", "?-", ","}
+    # Note: comma (,) is NOT excluded here - it's the conjunction operator at precedence 1000
+    # and must remain in the operator grammar. Comma is only handled structurally in
+    # specific contexts like `args` (compound term arguments) and `list_items`.
+    RESERVED_READER_SYNTAX = {":-", "-->", "?-"}
 
     for precedence, spec, name in operators:
         if name in RESERVED_READER_SYNTAX:
@@ -1781,14 +1789,15 @@ def generate_operator_rules(operators: list[tuple[int, str, str]]) -> str:
 
     rules.append(f"?term: {lower_rule}")
 
-    # Find the highest level below comma (precedence 1000) for argument parsing.
-    # Inside function arguments, comma is an argument separator, not the comma operator.
-    # So args should parse terms that exclude the comma operator.
+    # Argument parsing: Inside compound term arguments like foo(a, b), comma is a separator,
+    # not the conjunction operator. The `arg` rule parses terms at precedence below 1000
+    # (comma's precedence), so comma is not consumed as an operator within arguments.
+    # The comma separator is handled structurally by `args: arg (_COMMA arg)*`.
     arg_level = max((p for p in precedence_levels if p < 1000), default=None)
     if arg_level is not None:
         rules.append(f"?arg: level_{arg_level}")
     else:
-        # No operators below comma, use primary
+        # No operators below comma precedence, use primary
         rules.append("?arg: primary")
 
     if operator_token_names:
