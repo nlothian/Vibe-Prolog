@@ -85,3 +85,4 @@ uv run pytest --run-slow-tests        # include tests empirically longer than 4 
 ```
 
 `--run-performance` and `--run-slow-tests` are opt-in because they pull in heavyweight test cases that would otherwise be skipped.
+
